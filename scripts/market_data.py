@@ -70,6 +70,5 @@ if __name__ == "__main__":
     tickers = ['EEM', 'GLD', 'HYG', 'IWM', 'QQQ', 'SPY', 'TLT', 'USO', 'UUP']
     market = MarketData(tickers=tickers, start_date='2026-05-18',end_date='2026-06-17')
     prices = market.get_price_history()
-
-    val = market.validate_prices()
-    print(val)
+    print(prices)
+    
