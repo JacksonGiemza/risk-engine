@@ -9,7 +9,14 @@ class MarketData:
         self.prices = pd.DataFrame()
         self.returns = pd.DataFrame()
 
-    def get_price_history(self):
+    # -- facade methods --
+    def get_returns(self):
+        self._get_price_history()
+        returns = self._calculate_returns()
+        return returns
+    
+    # -- internal methods for data processing --
+    def _get_price_history(self):
         # get data from yahoo finance api using initialized variables
         history = yf.download(self.tickers, start=self.start_date, end=self.end_date,auto_adjust=True)
 
@@ -18,10 +25,10 @@ class MarketData:
         
         return self.prices
 
-    def save_prices_to_csv(self):
-        self.prices.to_csv(rf'../data/port_ticker_history_{self.start_date}_{self.end_date}.csv')
+    # def _save_prices_to_csv(self):
+    #     self.prices.to_csv(rf'../data/port_ticker_history_{self.start_date}_{self.end_date}.csv')
 
-    def validate_prices(self): 
+    def _validate_prices(self): 
         # check if prices df is empty, and raise value error if it is
         if self.prices.empty:
             raise ValueError("Prices DataFrame is empty.")
@@ -38,7 +45,7 @@ class MarketData:
         # find missing values
         missing_values = self.prices.isna().sum().sum()
 
-        date_range = (
+        start, end = (
         self.prices.index.min(),
         self.prices.index.max()
         )
@@ -49,15 +56,15 @@ class MarketData:
             "missing_values": missing_values,
             "duplicate_dates": duplicate_dates,
             "is_sorted": self.prices.index.is_monotonic_increasing,
-            "start_date": date_range[0],
-            "end_date": date_range[1]
+            "start_date": start,
+            "end_date": end
         }
 
         return info
 
-    def calculate_returns(self):
+    def _calculate_returns(self):
         # validate data
-        self.validate_prices()
+        self._validate_prices()
 
         if self.prices.empty:
             raise ValueError("Prices DataFrame is empty.")
@@ -66,9 +73,12 @@ class MarketData:
 
         return self.returns
     
-if __name__ == "__main__":
+def main():
     tickers = ['EEM', 'GLD', 'HYG', 'IWM', 'QQQ', 'SPY', 'TLT', 'USO', 'UUP']
     market = MarketData(tickers=tickers, start_date='2026-05-18',end_date='2026-06-17')
-    prices = market.get_price_history()
-    print(prices)
+    returns = market.get_returns()
+    print(returns)
+    
+if __name__ == "__main__":
+    main()
     
