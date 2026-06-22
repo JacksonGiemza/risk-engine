@@ -8,9 +8,10 @@ class Portfolio:
         self.portfolio = pd.DataFrame()
         self.ticker_list = None
         self.PATH = PATH
+        self.weighted_returns = pd.DataFrame()
+        self.portfolio_returns = pd.DataFrame()
     
     # -- facade methods -- 
-
     def process_port(self):
         self._load_portfolio()
         self._attach_latest_prices()
@@ -20,10 +21,17 @@ class Portfolio:
         return self.portfolio
 
     def calculate_portfolio_returns(self, returns):
-        for col in returns.columns:
-            weight = self.portfolio.loc[self.portfolio['symbol'] == col, 'weight']
-            returns[col] = returns[col].apply(lambda x: x * weight)
-        return returns
+        weighted_returns = returns.copy().dropna(how="all")
+
+        # calculate weighted returns for each ticker
+        for col in weighted_returns.columns:
+            weight = self.portfolio.loc[self.portfolio['symbol'] == col, 'weight'].values[0]
+            weighted_returns[col] = weighted_returns[col] * weight
+
+        self.weighted_returns = weighted_returns
+        self.portfolio_returns = weighted_returns.sum(axis=1)
+
+        return self.portfolio_returns
 
     def portfolio_summary(self):
         total_market_value = self.portfolio['market_value'].sum()
@@ -44,7 +52,6 @@ class Portfolio:
         return summary
 
     # -- internal methods --
-
     def _load_portfolio(self):
         self.portfolio = pd.read_csv(self.PATH)
 
@@ -80,7 +87,7 @@ class Portfolio:
 
     def _calculate_weights(self):
         total_port_value = self.portfolio['market_value'].sum()
-        self.portfolio["weight"] = round(self.portfolio['market_value'] / total_port_value, 2)
+        self.portfolio["weight"] = self.portfolio['market_value'] / total_port_value
         return self.portfolio
     
 
@@ -90,11 +97,9 @@ def main():
     print(port.ticker_list)
     
     md = MarketData(tickers=port.ticker_list, start_date='2026-05-18',end_date='2026-06-17')
-    returns = md.get_returns()
+    returns = md.get_asset_returns()
     
-    port_returns = port.calculate_portfolio_returns(returns)
-
-    print(port_returns.head())
+    print(port.calculate_portfolio_returns(returns))
 
 if __name__ == "__main__":
     main()

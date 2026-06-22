@@ -10,7 +10,7 @@ class MarketData:
         self.returns = pd.DataFrame()
 
     # -- facade methods --
-    def get_returns(self):
+    def get_asset_returns(self):
         self._get_price_history()
         returns = self._calculate_returns()
         return returns
