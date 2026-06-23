@@ -1,4 +1,7 @@
 import pandas as pd
+import numpy as np
+from scipy.stats import norm
+
 
 from market_data import MarketData
 from portfolio import Portfolio
@@ -68,8 +71,39 @@ class RiskEngine:
         worst_df = pd.DataFrame({'Return': worst_return, 'Dollar Loss': worst_dollar})
 
         return worst_df
+    
+    def parametric_var(self, returns, portfolio):
+        asset_returns = returns.copy().dropna()
 
+        w_vector = portfolio[['symbol','weight']].T
+        w_vector.columns = w_vector.iloc[0]
+        w_vector = w_vector.drop(w_vector.index[0])
+        w_vector = w_vector.reindex(columns=asset_returns.columns)
 
+        cov_matrix = asset_returns.cov()
+        cov_matrix.index.name = None
+        cov_matrix.columns.name = None
+
+        portfolio_variance = float((w_vector @ cov_matrix @ w_vector.T).iloc[0, 0])
+        portfolio_volatility = float(np.sqrt(portfolio_variance))
+
+        z_score = float(norm.ppf(1 - self.tail_probability))
+
+        var_dollars = z_score * portfolio_volatility * self.portfolio_value
+        
+        summary = {
+            'method': 'Parametric',
+            'confidence_level': round(self.confidence_level, 2),
+            'tail_probability': self.tail_probability,
+            'portfolio_variance': portfolio_variance,
+            'portfolio_volatility': portfolio_volatility,
+            'z_score': z_score,
+            'var_return': z_score * portfolio_volatility,
+            'ver_percent': -(z_score * portfolio_volatility),
+            'var_dollars': round(var_dollars, 2)
+        } 
+
+        return summary
     
 def main():
     port = Portfolio(r"data\portfolio.csv")
@@ -77,17 +111,16 @@ def main():
 
     md = MarketData(tickers=port.ticker_list, start_date='2026-05-18',end_date='2026-06-17')
     returns = md.get_asset_returns()
-    port_returns = port.calculate_portfolio_returns(returns)
 
     port_summary = port.portfolio_summary()
+    port_returns = port.calculate_portfolio_returns(returns)
+    portfolio = port.portfolio
 
     re = RiskEngine(port_summary['net_exposure'], 0.99)
-
-    hist_var = re.historical_var(port_returns)
-    print(hist_var)
-
-    es = re.expected_shortfall()
-    print(re.worst_days())
+    print()
+    print(re.historical_var(port_returns))
+    print()
+    print(re.parametric_var(returns, portfolio))
 
 if __name__ == "__main__":
     main()

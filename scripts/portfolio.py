@@ -99,7 +99,8 @@ def main():
     md = MarketData(tickers=port.ticker_list, start_date='2026-05-18',end_date='2026-06-17')
     returns = md.get_asset_returns()
     
-    print(port.calculate_portfolio_returns(returns))
+    print(returns.cov())
+
 
 if __name__ == "__main__":
     main()
