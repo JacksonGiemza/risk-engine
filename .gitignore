@@ -2,3 +2,6 @@
 .vscode/
 
 __pycache__/
+
+scratch.ipynb
+.ipynb_checkpoints/
