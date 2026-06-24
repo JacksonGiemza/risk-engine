@@ -33,31 +33,6 @@ class MarketData:
         
         self._save_prices_to_cache()
         return self.prices
-
-    def _load_prices_from_cache(self):
-        if self._cache_exists():
-            self.prices = pd.read_csv(self.raw_prices_file_path, index_col=0, parse_dates=True)
-            return self.prices
-        else: 
-            raise ValueError(f"Cache for {self.raw_prices_file_path} does not exist.")
-        
-    def _save_prices_to_cache(self):
-        self.raw_prices_file_path.parent.mkdir(parents=True, exist_ok=True)
-        self.prices.to_csv(self.raw_prices_file_path)
-    
-    def _cache_exists(self):
-        if self.raw_prices_file_path.is_file():
-            return True
-        return False
-
-    def _create_dynamic_paths(self):
-        root = Path(__file__).resolve().parents[1]
-        data_path = root / "data"
-
-        # generate file name for raw prices
-        sorted_tickers = sorted([t.upper() for t in self.tickers])
-        ticker_hash = hashlib.md5(",".join(sorted_tickers).encode()).hexdigest()[:8]
-        self.raw_prices_file_path = Path(data_path / "raw" / "prices" / f"raw_prices_{ticker_hash}_{self.start_date}_to_{self.end_date}.csv")
         
     def _validate_prices(self): 
         # check if prices df is empty, and raise value error if it is
@@ -106,6 +81,32 @@ class MarketData:
         self.returns = (self.prices / self.prices.shift(1)) - 1
 
         return self.returns
+    
+    ### caching methods for raw price data ###
+    def _load_prices_from_cache(self):
+        if self._cache_exists():
+            self.prices = pd.read_csv(self.raw_prices_file_path, index_col=0, parse_dates=True)
+            return self.prices
+        else: 
+            raise ValueError(f"Cache for {self.raw_prices_file_path} does not exist.")
+        
+    def _save_prices_to_cache(self):
+        self.raw_prices_file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.prices.to_csv(self.raw_prices_file_path)
+    
+    def _cache_exists(self):
+        if self.raw_prices_file_path.is_file():
+            return True
+        return False
+
+    def _create_dynamic_paths(self):
+        root = Path(__file__).resolve().parents[1]
+        data_path = root / "data"
+
+        # generate file name for raw prices
+        sorted_tickers = sorted([t.upper() for t in self.tickers])
+        ticker_hash = hashlib.md5(",".join(sorted_tickers).encode()).hexdigest()[:8]
+        self.raw_prices_file_path = Path(data_path / "raw" / "prices" / f"raw_prices_{ticker_hash}_{self.start_date}_to_{self.end_date}.csv")
     
 def main():
     tickers = ['EEM', 'GLD', 'HYG', 'IWM', 'QQQ', 'SPY', 'TLT', 'USO', 'UUP']
