@@ -1,6 +1,7 @@
 import pandas as pd
 import yfinance as yf
 from pathlib import Path
+import hashlib
 
 class MarketData:
     def __init__(self, tickers, start_date, end_date):
@@ -9,10 +10,16 @@ class MarketData:
         self.end_date = end_date
         self.prices = pd.DataFrame()
         self.returns = pd.DataFrame()
+        self.raw_prices_file_path = None
+        self._create_dynamic_paths()
 
     # -- facade methods --
-    def get_asset_returns(self):
-        self._get_price_history()
+    def get_asset_returns(self, use_cache=True):
+        if use_cache and self._cache_exists():
+            self._load_prices_from_cache()
+        else:
+            self._get_price_history()
+
         returns = self._calculate_returns()
         return returns
     
@@ -24,11 +31,34 @@ class MarketData:
         # populate prices df with the close data from history
         self.prices = history['Close']
         
+        self._save_prices_to_cache()
         return self.prices
 
-    # def _save_prices_to_csv(self):
-    #     self.prices.to_csv(rf'../data/port_ticker_history_{self.start_date}_{self.end_date}.csv')
+    def _load_prices_from_cache(self):
+        if self._cache_exists():
+            self.prices = pd.read_csv(self.raw_prices_file_path, index_col=0, parse_dates=True)
+            return self.prices
+        else: 
+            raise ValueError(f"Cache for {self.raw_prices_file_path} does not exist.")
+        
+    def _save_prices_to_cache(self):
+        self.raw_prices_file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.prices.to_csv(self.raw_prices_file_path)
+    
+    def _cache_exists(self):
+        if self.raw_prices_file_path.is_file():
+            return True
+        return False
 
+    def _create_dynamic_paths(self):
+        root = Path(__file__).resolve().parents[1]
+        data_path = root / "data"
+
+        # generate file name for raw prices
+        sorted_tickers = sorted([t.upper() for t in self.tickers])
+        ticker_hash = hashlib.md5(",".join(sorted_tickers).encode()).hexdigest()[:8]
+        self.raw_prices_file_path = Path(data_path / "raw" / "prices" / f"raw_prices_{ticker_hash}_{self.start_date}_to_{self.end_date}.csv")
+        
     def _validate_prices(self): 
         # check if prices df is empty, and raise value error if it is
         if self.prices.empty:
@@ -50,6 +80,9 @@ class MarketData:
         self.prices.index.min(),
         self.prices.index.max()
         )
+
+        if not self.prices.index.is_monotonic_increasing:
+            raise ValueError("Price index is not sorted oldest to newest.")
         
         info = {
             "rows": rows,
