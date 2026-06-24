@@ -1,5 +1,6 @@
 import pandas as pd
 import yfinance as yf
+from pathlib import Path
 
 class MarketData:
     def __init__(self, tickers, start_date, end_date):
@@ -76,7 +77,7 @@ class MarketData:
 def main():
     tickers = ['EEM', 'GLD', 'HYG', 'IWM', 'QQQ', 'SPY', 'TLT', 'USO', 'UUP']
     market = MarketData(tickers=tickers, start_date='2026-05-18',end_date='2026-06-17')
-    returns = market.get_returns()
+    returns = market.get_asset_returns()
     print(returns)
     
 if __name__ == "__main__":

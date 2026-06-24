@@ -73,16 +73,7 @@ class RiskEngine:
         return worst_df
     
     def parametric_var(self, returns, portfolio):
-        asset_returns = returns.copy().dropna()
-
-        w_vector = portfolio[['symbol','weight']].T
-        w_vector.columns = w_vector.iloc[0]
-        w_vector = w_vector.drop(w_vector.index[0])
-        w_vector = w_vector.reindex(columns=asset_returns.columns)
-
-        cov_matrix = asset_returns.cov()
-        cov_matrix.index.name = None
-        cov_matrix.columns.name = None
+        w_vector, cov_matrix =  self._get_cov_matrix_and_weight_vector(returns, portfolio)
 
         portfolio_variance = float((w_vector @ cov_matrix @ w_vector.T).iloc[0, 0])
         portfolio_volatility = float(np.sqrt(portfolio_variance))
@@ -105,6 +96,48 @@ class RiskEngine:
 
         return summary
     
+    def monte_carlo_var(self, returns, portfolio, n=10000):
+        asset_returns = returns.copy().dropna()
+        w_vector, cov_matrix =  self._get_cov_matrix_and_weight_vector(returns, portfolio)
+        mean_vector = asset_returns.mean()
+
+        np.random.seed(42)
+        sim_returns = np.random.multivariate_normal(mean_vector, cov_matrix, n)
+        sim_returns = pd.DataFrame(sim_returns, columns=cov_matrix.columns)
+
+        sim_port_returns = sim_returns @ w_vector.T
+
+        var_return = float(sim_port_returns.quantile(self.tail_probability).item())
+        var_dollars = abs(var_return) * self.portfolio_value
+
+        summary = {
+            'method': 'Monte Carlo',
+            'confidence_level': round(self.confidence_level, 2),
+            'tail_probability': self.tail_probability,
+            'num_simulation': n,
+            'var_return': var_return,
+            'ver_percent': -var_return,
+            'var_dollars': round(var_dollars, 2)
+        }
+        
+        return summary
+
+
+    def _get_cov_matrix_and_weight_vector(self, returns, portfolio):
+        asset_returns = returns.copy()
+
+        w_vector = portfolio[['symbol','weight']].T
+        w_vector.columns = w_vector.iloc[0]
+        w_vector = w_vector.drop(w_vector.index[0])
+        w_vector = w_vector.reindex(columns=asset_returns.columns)
+
+        cov_matrix = asset_returns.cov()
+        cov_matrix.index.name = None
+        cov_matrix.columns.name = None
+
+        return w_vector, cov_matrix
+
+
 def main():
     port = Portfolio(r"data\portfolio.csv")
     port.process_port()    
@@ -118,9 +151,8 @@ def main():
 
     re = RiskEngine(port_summary['net_exposure'], 0.99)
     print()
-    print(re.historical_var(port_returns))
     print()
-    print(re.parametric_var(returns, portfolio))
+    print(re.monte_carlo_var(returns, portfolio))
 
 if __name__ == "__main__":
     main()
