@@ -18,6 +18,7 @@ class Portfolio:
         return self.portfolio
 
     def calculate_portfolio_returns(self, asset_returns):
+        self._validate_portfolio(stage="processed")
         asset_returns = asset_returns.copy().dropna(how="all")
 
         weights = self._get_weights(asset_returns.columns)    
@@ -27,10 +28,12 @@ class Portfolio:
         return self.portfolio_returns
 
     def portfolio_summary(self):
+        self._validate_portfolio(stage="processed")
+
         total_market_value = self.portfolio['market_value'].sum()
         long_exposure = self.portfolio.loc[self.portfolio['side'] == 'Long', 'market_value'].sum()
         short_exposure = self.portfolio.loc[self.portfolio['side'] == 'Short', 'market_value'].sum()
-        gross_exposure = abs(long_exposure) + abs(short_exposure)
+        gross_exposure = self.portfolio["abs_exposure"].sum()
         net_exposure = long_exposure + short_exposure
 
         summary = {
@@ -81,6 +84,10 @@ class Portfolio:
         weights = self.portfolio[['symbol','weight']].T
         weights.columns = weights.iloc[0]
         weights = weights.drop(weights.index[0]).reindex(columns=returns_columns)
+
+        if weights.isna().any().any():
+            raise ValueError("Missing weights for one or more return columns.")
+        
         return weights
     
     def _validate_portfolio(self, stage="loaded"):
@@ -88,7 +95,7 @@ class Portfolio:
             if self.portfolio.empty:
                 raise ValueError("Portfolio is empty.")
             
-            if 'symbol' not in self.portfolio.columns or 'quantity' not in self.portfolio:
+            if 'symbol' not in self.portfolio.columns or 'quantity' not in self.portfolio.columns:
                 raise ValueError("Portfolio missing required columns, symbol and or quantity.")
             
             if not self.portfolio['symbol'].is_unique:
@@ -119,6 +126,15 @@ class Portfolio:
             
             if self.portfolio['abs_exposure'].sum() <= 0:
                 raise ValueError("Portfolio gross exposure is 0 or less.")
+            
+            if self.portfolio['market_value'].isna().any():
+                raise ValueError("Missing values in portfolio market_value.")
+            
+            if self.portfolio['abs_exposure'].isna().any():
+                raise ValueError("Missing values in portfolio abs_exposure.")
+            
+            if self.portfolio['weight'].isna().any():
+                raise ValueError("Missing values in portfolio weight.")
             
             
 
