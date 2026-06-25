@@ -6,21 +6,21 @@ class Portfolio:
         self.weighted_returns = pd.DataFrame()
         self.portfolio_returns = pd.DataFrame()
         self.portfolio, self.ticker_list = self._load_portfolio()
-    
+
     # -- facade methods -- 
     def process_port(self, latest_prices):
+        self._validate_portfolio(stage="loaded")
         self._attach_latest_prices(latest_prices)
+        self._validate_portfolio(stage="priced")
         self._calculate_market_values()
         self._calculate_weights()
+        self._validate_portfolio(stage="processed")
         return self.portfolio
 
     def calculate_portfolio_returns(self, asset_returns):
         asset_returns = asset_returns.copy().dropna(how="all")
 
-        weights = self.portfolio[['symbol','weight']].T
-        weights.columns = weights.iloc[0]
-        weights = weights.drop(weights.index[0]).reindex(columns=asset_returns.columns)
-
+        weights = self._get_weights(asset_returns.columns)    
         self.weighted_returns = asset_returns.mul(weights.iloc[0],axis=1)
         self.portfolio_returns = self.weighted_returns.sum(axis=1)
 
@@ -39,16 +39,13 @@ class Portfolio:
             "short_exposure": round(abs(short_exposure), 2),
             "gross_exposure": round(gross_exposure, 2),
             "net_exposure": round(net_exposure, 2),
-            "gross_leverage": round(gross_exposure / total_market_value, 2),
-            "net_leverage": round(net_exposure / total_market_value, 2)
+            "net_exposure_ratio": round(net_exposure / gross_exposure, 2),
         }
         return summary
 
     # -- internal methods --
     def _load_portfolio(self):
         self.portfolio = pd.read_csv(self.PATH)
-
-        self.portfolio = self.portfolio.drop(['asset_class','currency','strategy'],axis=1)
 
         self.portfolio['side'] = 'Long'
         self.portfolio.loc[self.portfolio['quantity'] < 0, 'side'] = 'Short'
@@ -72,25 +69,59 @@ class Portfolio:
     def _calculate_market_values(self):
         self.portfolio['market_value'] = self.portfolio['quantity'] * self.portfolio['latest_price']
         self.portfolio['abs_exposure'] = self.portfolio["market_value"].abs()
+        self.gross_exposure = self.portfolio['abs_exposure'].sum()
+
         return self.portfolio
 
     def _calculate_weights(self):
-        gross_exposure = self.portfolio['abs_exposure'].sum()
-        self.portfolio["weight"] = self.portfolio['market_value'] / gross_exposure
+        self.portfolio["weight"] = self.portfolio['market_value'] / self.gross_exposure
         return self.portfolio
     
-    def _validate_portfolio(self):
-        if self.portfolio.empty:
-            raise ValueError("Portfolio is empty.")
-        
-        if 'symbol' not in self.portfolio or 'weight' not in self.portfolio:
-            raise ValueError("Portfolio missing required columns, symbol and or weight.")
-        
-        if not self.portfolio['symbol'].is_unique:
-            raise ValueError("Portfolio has duplicate symbols.")
-        
-        if self.portfolio['abs_exposure'].sum() == 0:
-            raise ValueError("Portfolio gross exposure is 0")
+    def _get_weights(self, returns_columns):
+        weights = self.portfolio[['symbol','weight']].T
+        weights.columns = weights.iloc[0]
+        weights = weights.drop(weights.index[0]).reindex(columns=returns_columns)
+        return weights
+    
+    def _validate_portfolio(self, stage="loaded"):
+        if stage == "loaded":
+            if self.portfolio.empty:
+                raise ValueError("Portfolio is empty.")
+            
+            if 'symbol' not in self.portfolio.columns or 'quantity' not in self.portfolio:
+                raise ValueError("Portfolio missing required columns, symbol and or quantity.")
+            
+            if not self.portfolio['symbol'].is_unique:
+                raise ValueError("Portfolio has duplicate symbols.")
+            
+            if not pd.api.types.is_numeric_dtype(self.portfolio['quantity']):
+                raise ValueError("quantity is not numeric.")
+
+        if stage == "priced":
+            if 'latest_price' not in self.portfolio.columns:
+                raise ValueError("latest_price column not found.")
+            
+            if self.portfolio['latest_price'].isna().any():
+                raise ValueError("Missing values in portfolio latest_price.")
+            
+            if not pd.api.types.is_numeric_dtype(self.portfolio['latest_price']):
+                raise ValueError("latest_price is not numeric.")
+
+        if stage == "processed":
+            if 'market_value' not in self.portfolio.columns:
+                raise ValueError("market_value column not found.")
+            
+            if 'abs_exposure' not in self.portfolio.columns:
+                raise ValueError("abs_exposure column not found.")
+            
+            if 'weight' not in self.portfolio.columns:
+                raise ValueError("weight column not found.")
+            
+            if self.portfolio['abs_exposure'].sum() <= 0:
+                raise ValueError("Portfolio gross exposure is 0 or less.")
+            
+            
+
 
 def main():
     from market_data import MarketData
