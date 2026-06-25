@@ -23,6 +23,12 @@ class MarketData:
         returns = self._calculate_returns()
         return returns
     
+    def get_latest_prices(self):
+        if self.prices.empty:
+            raise ValueError("Load prices before getting latest prices.")
+        
+        return self.prices.iloc[-1]
+    
     # -- internal methods for data processing --
     def _get_price_history(self):
         # get data from yahoo finance api using initialized variables
