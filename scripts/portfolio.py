@@ -58,14 +58,11 @@ class Portfolio:
         return self.portfolio, self.ticker_list
     
     def _attach_latest_prices(self, latest_prices):
-        self.portfolio['latest_price'] = None
-        for symbol in self.ticker_list:
-            try:
-                current_price = latest_prices.loc[symbol]
-                self.portfolio.loc[self.portfolio['symbol'] == symbol, 'latest_price'] = current_price
-                
-            except Exception as e:
-                raise ValueError(f"No data for {symbol}: {e}, in latest prices.")
+        self.portfolio['latest_price'] = pd.Series(dtype="float64")
+
+        self.portfolio['latest_price'] = [
+            latest_prices.get(sym, float('nan')) for sym in self.portfolio['symbol']
+        ]
 
         return self.portfolio
 
@@ -135,9 +132,6 @@ class Portfolio:
             
             if self.portfolio['weight'].isna().any():
                 raise ValueError("Missing values in portfolio weight.")
-            
-            
-
 
 def main():
     from market_data import MarketData

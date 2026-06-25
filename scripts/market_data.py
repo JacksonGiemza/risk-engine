@@ -27,7 +27,7 @@ class MarketData:
         if self.prices.empty:
             raise ValueError("Load prices before getting latest prices.")
         
-        return self.prices.iloc[-1]
+        return self.prices.iloc[-1].to_dict()
     
     # -- internal methods for data processing --
     def _get_price_history(self):
