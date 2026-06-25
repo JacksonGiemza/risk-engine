@@ -9,7 +9,6 @@ class Portfolio:
     
     # -- facade methods -- 
     def process_port(self, latest_prices):
-        self._load_portfolio()
         self._attach_latest_prices(latest_prices)
         self._calculate_market_values()
         self._calculate_weights()
@@ -66,20 +65,32 @@ class Portfolio:
                 self.portfolio.loc[self.portfolio['symbol'] == symbol, 'latest_price'] = current_price
                 
             except Exception as e:
-                print(f"No data for {symbol}: {e}, in latest prices.")
+                raise ValueError(f"No data for {symbol}: {e}, in latest prices.")
 
         return self.portfolio
 
     def _calculate_market_values(self):
         self.portfolio['market_value'] = self.portfolio['quantity'] * self.portfolio['latest_price']
-        self.portfolio['abs_exposure'] = abs(self.portfolio['quantity'] * self.portfolio['latest_price'])
+        self.portfolio['abs_exposure'] = self.portfolio["market_value"].abs()
         return self.portfolio
 
     def _calculate_weights(self):
-        total_port_value = self.portfolio['market_value'].sum()
-        self.portfolio["weight"] = self.portfolio['market_value'] / total_port_value
+        gross_exposure = self.portfolio['abs_exposure'].sum()
+        self.portfolio["weight"] = self.portfolio['market_value'] / gross_exposure
         return self.portfolio
     
+    def _validate_portfolio(self):
+        if self.portfolio.empty:
+            raise ValueError("Portfolio is empty.")
+        
+        if 'symbol' not in self.portfolio or 'weight' not in self.portfolio:
+            raise ValueError("Portfolio missing required columns, symbol and or weight.")
+        
+        if not self.portfolio['symbol'].is_unique:
+            raise ValueError("Portfolio has duplicate symbols.")
+        
+        if self.portfolio['abs_exposure'].sum() == 0:
+            raise ValueError("Portfolio gross exposure is 0")
 
 def main():
     from market_data import MarketData
