@@ -1,15 +1,11 @@
 import pandas as pd
-import yfinance as yf
-from market_data import MarketData
 
 class Portfolio:
-
     def __init__(self, PATH):
-        self.portfolio = pd.DataFrame()
-        self.ticker_list = None
         self.PATH = PATH
         self.weighted_returns = pd.DataFrame()
         self.portfolio_returns = pd.DataFrame()
+        self.portfolio, self.ticker_list = self._load_portfolio()
     
     # -- facade methods -- 
     def process_port(self, latest_prices):
@@ -17,19 +13,17 @@ class Portfolio:
         self._attach_latest_prices(latest_prices)
         self._calculate_market_values()
         self._calculate_weights()
-
         return self.portfolio
 
-    def calculate_portfolio_returns(self, returns):
-        weighted_returns = returns.copy().dropna(how="all")
+    def calculate_portfolio_returns(self, asset_returns):
+        asset_returns = asset_returns.copy().dropna(how="all")
 
-        # calculate weighted returns for each ticker
-        for col in weighted_returns.columns:
-            weight = self.portfolio.loc[self.portfolio['symbol'] == col, 'weight'].values[0]
-            weighted_returns[col] = weighted_returns[col] * weight
+        weights = self.portfolio[['symbol','weight']].T
+        weights.columns = weights.iloc[0]
+        weights = weights.drop(weights.index[0]).reindex(columns=asset_returns.columns)
 
-        self.weighted_returns = weighted_returns
-        self.portfolio_returns = weighted_returns.sum(axis=1)
+        self.weighted_returns = asset_returns.mul(weights.iloc[0],axis=1)
+        self.portfolio_returns = self.weighted_returns.sum(axis=1)
 
         return self.portfolio_returns
 
@@ -62,7 +56,7 @@ class Portfolio:
 
         self.ticker_list = list(self.portfolio['symbol'].unique())
 
-        return self.portfolio
+        return self.portfolio, self.ticker_list
     
     def _attach_latest_prices(self, latest_prices):
         self.portfolio['latest_price'] = None
@@ -88,14 +82,16 @@ class Portfolio:
     
 
 def main():
-    port = Portfolio(r"data\portfolio.csv")
-    port.process_port()
-    print(port.ticker_list)
-    
+    from market_data import MarketData
+
+    port = Portfolio(r"data\raw\portfolio\portfolio.csv")
+
     md = MarketData(tickers=port.ticker_list, start_date='2026-05-18',end_date='2026-06-17')
     returns = md.get_asset_returns()
-    
-    print(returns.cov())
+    latest_prices = md.get_latest_prices()
+
+    port.process_port(latest_prices)
+    print(port.calculate_portfolio_returns(returns))
 
 
 if __name__ == "__main__":

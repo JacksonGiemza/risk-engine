@@ -31,30 +31,21 @@ class MarketData:
     
     # -- internal methods for data processing --
     def _get_price_history(self):
-        # get data from yahoo finance api using initialized variables
         history = yf.download(self.tickers, start=self.start_date, end=self.end_date,auto_adjust=True)
-
-        # populate prices df with the close data from history
         self.prices = history['Close']
-        
         self._save_prices_to_cache()
         return self.prices
         
     def _validate_prices(self): 
-        # check if prices df is empty, and raise value error if it is
         if self.prices.empty:
             raise ValueError("Prices DataFrame is empty.")
         
-        # get shape tuple of prices df
         rows, columns = self.prices.shape
-        
-        # check the date index of prices for duplicates and return num of unique duplicates
         duplicate_dates = len(self.prices.index[self.prices.index.duplicated()].unique())
         
         if duplicate_dates > 0:
             raise ValueError("Duplicate dates within prices df")
 
-        # find missing values
         missing_values = self.prices.isna().sum().sum()
 
         start, end = (
@@ -74,11 +65,9 @@ class MarketData:
             "start_date": start,
             "end_date": end
         }
-
         return info
 
     def _calculate_returns(self):
-        # validate data
         self._validate_prices()
 
         if self.prices.empty:
@@ -109,7 +98,6 @@ class MarketData:
         root = Path(__file__).resolve().parents[1]
         data_path = root / "data"
 
-        # generate file name for raw prices
         sorted_tickers = sorted([t.upper() for t in self.tickers])
         ticker_hash = hashlib.md5(",".join(sorted_tickers).encode()).hexdigest()[:8]
         self.raw_prices_file_path = Path(data_path / "raw" / "prices" / f"raw_prices_{ticker_hash}_{self.start_date}_to_{self.end_date}.csv")
