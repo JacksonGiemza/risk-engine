@@ -118,7 +118,7 @@ def main():
     tickers = ['EEM', 'GLD', 'HYG', 'IWM', 'QQQ', 'SPY', 'TLT', 'USO', 'UUP']
     market = MarketData(tickers=tickers, start_date='2026-05-18',end_date='2026-06-17')
     returns = market.get_asset_returns()
-    print(returns)
+    print(market.get_latest_prices().loc['EEM'])
     
 if __name__ == "__main__":
     main()

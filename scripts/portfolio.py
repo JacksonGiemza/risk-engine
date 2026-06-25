@@ -12,9 +12,9 @@ class Portfolio:
         self.portfolio_returns = pd.DataFrame()
     
     # -- facade methods -- 
-    def process_port(self):
+    def process_port(self, latest_prices):
         self._load_portfolio()
-        self._attach_latest_prices()
+        self._attach_latest_prices(latest_prices)
         self._calculate_market_values()
         self._calculate_weights()
 
@@ -64,19 +64,15 @@ class Portfolio:
 
         return self.portfolio
     
-    def _attach_latest_prices(self):
-        
+    def _attach_latest_prices(self, latest_prices):
         self.portfolio['latest_price'] = None
-
-        tickers = yf.Tickers(self.ticker_list)
-        
         for symbol in self.ticker_list:
             try:
-                current_price = tickers.tickers[symbol].info.get('regularMarketPrice')
+                current_price = latest_prices.loc[symbol]
                 self.portfolio.loc[self.portfolio['symbol'] == symbol, 'latest_price'] = current_price
                 
             except Exception as e:
-                print(f"Could not fetch data for {symbol}: {e}")
+                print(f"No data for {symbol}: {e}, in latest prices.")
 
         return self.portfolio
 
