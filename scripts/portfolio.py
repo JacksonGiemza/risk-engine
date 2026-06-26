@@ -30,19 +30,19 @@ class Portfolio:
     def portfolio_summary(self):
         self._validate_portfolio(stage="processed")
 
-        total_market_value = self.portfolio['market_value'].sum()
-        long_exposure = self.portfolio.loc[self.portfolio['side'] == 'Long', 'market_value'].sum()
-        short_exposure = self.portfolio.loc[self.portfolio['side'] == 'Short', 'market_value'].sum()
-        gross_exposure = self.portfolio["abs_exposure"].sum()
+        total_market_value = float(self.portfolio['market_value'].sum())
+        long_exposure = float(self.portfolio.loc[self.portfolio['side'] == 'Long', 'market_value'].sum())
+        short_exposure = float(self.portfolio.loc[self.portfolio['side'] == 'Short', 'market_value'].sum())
+        gross_exposure = float(self.portfolio["abs_exposure"].sum())
         net_exposure = long_exposure + short_exposure
 
         summary = {
-            "total_market_value": round(total_market_value, 2),
-            "long_exposure": round(long_exposure, 2),
-            "short_exposure": round(abs(short_exposure), 2),
-            "gross_exposure": round(gross_exposure, 2),
-            "net_exposure": round(net_exposure, 2),
-            "net_exposure_ratio": round(net_exposure / gross_exposure, 2),
+            "total_market_value": total_market_value,
+            "long_exposure": long_exposure,
+            "short_exposure": abs(short_exposure),
+            "gross_exposure": gross_exposure,
+            "net_exposure": net_exposure,
+            "net_exposure_ratio": net_exposure / gross_exposure
         }
         return summary
     
@@ -143,7 +143,7 @@ def main():
     latest_prices = md.get_latest_prices()
 
     port.process_port(latest_prices)
-    print(port.calculate_portfolio_returns(returns))
+    print(port.portfolio_summary())
 
 
 if __name__ == "__main__":
