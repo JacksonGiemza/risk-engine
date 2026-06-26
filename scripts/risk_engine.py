@@ -32,6 +32,9 @@ class RiskEngine:
         self.cov_matrix.index.name = None
         self.cov_matrix.columns.name = None
 
+        if (self.weights.index != self.cov_matrix.columns).all():
+            raise ValueError("weights and cov_matrix columns unaligned.")
+
         self.mean_vector = self.asset_returns.mean()
 
 
@@ -41,11 +44,11 @@ class RiskEngine:
 
         summary = {
             'method': 'Historical',
-            'confidence_level': round(self.confidence_level, 2),
+            'confidence_level': self.confidence_level,
             'tail_probability': self.tail_probability,
-            'var_return': round(var_return, 3),
-            'var_percent': round(abs(var_return), 3),
-            'var_dollars': round(var_dollars, 2)
+            'var_return': var_return,
+            'var_percent': abs(var_return),
+            'var_dollars': var_dollars
         } 
 
         return summary
@@ -77,7 +80,7 @@ class RiskEngine:
     
     def parametric_var(self):
 
-        portfolio_variance = float((self.weights @ self.cov_matrix @ self.weights.T).iloc[0, 0])
+        portfolio_variance = self.weights.T @ self.cov_matrix @ self.weights
         portfolio_volatility = float(np.sqrt(portfolio_variance))
 
         z_score = float(norm.ppf(1 - self.tail_probability))
@@ -88,36 +91,37 @@ class RiskEngine:
         
         summary = {
             'method': 'Parametric',
-            'confidence_level': round(self.confidence_level, 2),
+            'confidence_level': self.confidence_level,
             'tail_probability': self.tail_probability,
             'portfolio_variance': portfolio_variance,
             'portfolio_volatility': portfolio_volatility,
             'z_score': z_score,
             'var_return': var_return,
             'var_percent': var_percent,
-            'var_dollars': round(var_dollars, 2)
+            'var_dollars': var_dollars
         } 
 
         return summary
     
-    def monte_carlo_var(self, n=10000):
-        np.random.seed(42)
+    def monte_carlo_var(self, n=10000, seed=42):
+        np.random.seed(seed)
         sim_returns = np.random.multivariate_normal(self.mean_vector, self.cov_matrix, n)
         sim_returns = pd.DataFrame(sim_returns, columns=self.cov_matrix.columns)
 
-        sim_port_returns = sim_returns @ self.weights.T
+        sim_port_returns = sim_returns @ self.weights
 
         var_return = float(sim_port_returns.quantile(self.tail_probability).item())
         var_dollars = float(abs(var_return) * self.portfolio_value)
 
         summary = {
             'method': 'Monte Carlo',
-            'confidence_level': round(self.confidence_level, 2),
+            'confidence_level': self.confidence_level,
             'tail_probability': self.tail_probability,
             'num_simulation': n,
+            'random_seed': seed,
             'var_return': var_return,
             'var_percent': -var_return,
-            'var_dollars': round(var_dollars, 2)
+            'var_dollars': var_dollars
         }
         
         return summary
@@ -137,7 +141,7 @@ def main():
     port.process_port(latest_prices)    
 
     port_returns = port.calculate_portfolio_returns(returns)
-    port_value = port.portfolio_summary()['net_exposure']
+    port_value = port.portfolio_summary()['gross_exposure']
     weights = port.get_weights(returns.columns)
 
     re = RiskEngine(portfolio_returns=port_returns, asset_returns=returns, weights=weights, portfolio_value=port_value, confidence_level=0.99)

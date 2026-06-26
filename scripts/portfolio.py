@@ -22,7 +22,7 @@ class Portfolio:
         asset_returns = asset_returns.copy().dropna(how="all")
 
         weights = self.get_weights(asset_returns.columns)    
-        self.weighted_returns = asset_returns.mul(weights.iloc[0],axis=1)
+        self.weighted_returns = asset_returns.mul(weights, axis=1)
         self.portfolio_returns = self.weighted_returns.sum(axis=1)
 
         return self.portfolio_returns
@@ -47,11 +47,13 @@ class Portfolio:
         return summary
     
     def get_weights(self, returns_columns):
-        weights = self.portfolio[['symbol','weight']].T
-        weights.columns = weights.iloc[0]
-        weights = weights.drop(weights.index[0]).reindex(columns=returns_columns)
+        weights = (
+            self.portfolio
+                .set_index("symbol")["weight"]
+                .reindex(returns_columns)
+        )
 
-        if weights.isna().any().any():
+        if weights.isna().any():
             raise ValueError("Missing weights for one or more return columns.")
         
         return weights
