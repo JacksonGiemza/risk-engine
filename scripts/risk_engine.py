@@ -28,6 +28,9 @@ class RiskEngine:
 
         self.weights = weights
 
+        if weights.empty:
+            raise ValueError("Weights series is empty.")
+
         self.cov_matrix = self.asset_returns.cov()
         self.cov_matrix.index.name = None
         self.cov_matrix.columns.name = None
@@ -42,33 +45,78 @@ class RiskEngine:
         var_return = float(self.portfolio_returns.quantile(self.tail_probability))
         var_dollars  = float(self.portfolio_value * abs(var_return))
 
+        tail_losses = self.portfolio_returns[self.portfolio_returns <= var_return]
+        es_return = float(tail_losses.mean())
+        es_dollars = float(abs(es_return) * self.portfolio_value)
+
         summary = {
             'method': 'Historical',
             'confidence_level': self.confidence_level,
             'tail_probability': self.tail_probability,
             'var_return': var_return,
             'var_percent': abs(var_return),
-            'var_dollars': var_dollars
+            'var_dollars': var_dollars,
+            'es_return': es_return,
+            'es_percent': abs(es_return),
+            'es_dollars': es_dollars
         } 
 
         return summary
+    
+    def parametric_var(self):
+        variance = self.weights.T @ self.cov_matrix @ self.weights
+        volatility = float(np.sqrt(variance))
 
-    # def expected_shortfall(self):
-    #     if self.var_return is None or self.portfolio_returns.empty:
-    #         raise ValueError("Run historical_var before expected_shortfall.")
+        z_score = float(norm.ppf(1 - self.tail_probability))
 
-    #     tail_losses = self.portfolio_returns[self.portfolio_returns <= self.var_return]
-    #     expected_shortfall = float(tail_losses.mean())
-    #     es_dollars = self.portfolio_value * abs(expected_shortfall)
+        var_percent = z_score * volatility
+        var_return = -var_percent
+        var_dollars = float(z_score * volatility * self.portfolio_value)
+        
+        es_percent = float((volatility * norm.pdf(z_score)) / self.tail_probability)
+        es_dollars = float(es_percent * self.portfolio_value)
 
-    #     summary = {
-    #        'method': 'Historical Expected Shortfall',
-    #        'confidence_level': round(self.confidence_level, 2),
-    #        'es_return': round(expected_shortfall, 3),
-    #        'es_percent': round(abs(expected_shortfall), 3),
-    #        'es_dollars': round(es_dollars, 2)
-    #     }
-    #     return summary
+        summary = {
+            'method': 'Parametric',
+            'confidence_level': self.confidence_level,
+            'tail_probability': self.tail_probability,
+            'var_return': var_return,
+            'var_percent': var_percent,
+            'var_dollars': var_dollars,
+            'es_return': -es_percent,
+            'es_percent': es_percent,
+            'es_dollars': es_dollars
+        } 
+
+        return summary
+    
+    def monte_carlo_var(self, n=10000, seed=42):
+        np.random.seed(seed)
+        sim = np.random.multivariate_normal(self.mean_vector, self.cov_matrix, n)
+        sim = pd.DataFrame(sim, columns=self.cov_matrix.columns)
+
+        sim_returns = sim @ self.weights
+
+        var_return = float(sim_returns.quantile(self.tail_probability).item())
+        var_dollars = float(abs(var_return) * self.portfolio_value)
+        
+        tail_loss = sim_returns[sim_returns <= var_return]
+        es_return = float(tail_loss.mean())
+        es_dollars = float(abs(es_return) * self.portfolio_value)
+
+        summary = {
+            'method': 'Monte Carlo',
+            'confidence_level': self.confidence_level,
+            'tail_probability': self.tail_probability,
+            'var_return': var_return,
+            'var_percent': abs(var_return),
+            'var_dollars': var_dollars,
+            'es_return': es_return,
+            'es_percent': abs(es_return),
+            'es_dollars': es_dollars
+        }
+        
+        return summary
     
     def worst_days(self, n=10):
         worst_return = self.portfolio_returns[self.portfolio_returns < 0].nsmallest(n)
@@ -77,54 +125,6 @@ class RiskEngine:
         worst_df = pd.DataFrame({'Return': worst_return, 'Dollar Loss': worst_dollar})
 
         return worst_df
-    
-    def parametric_var(self):
-
-        portfolio_variance = self.weights.T @ self.cov_matrix @ self.weights
-        portfolio_volatility = float(np.sqrt(portfolio_variance))
-
-        z_score = float(norm.ppf(1 - self.tail_probability))
-
-        var_percent = z_score * portfolio_volatility
-        var_return = -var_percent
-        var_dollars = float(z_score * portfolio_volatility * self.portfolio_value)
-        
-        summary = {
-            'method': 'Parametric',
-            'confidence_level': self.confidence_level,
-            'tail_probability': self.tail_probability,
-            'portfolio_variance': portfolio_variance,
-            'portfolio_volatility': portfolio_volatility,
-            'z_score': z_score,
-            'var_return': var_return,
-            'var_percent': var_percent,
-            'var_dollars': var_dollars
-        } 
-
-        return summary
-    
-    def monte_carlo_var(self, n=10000, seed=42):
-        np.random.seed(seed)
-        sim_returns = np.random.multivariate_normal(self.mean_vector, self.cov_matrix, n)
-        sim_returns = pd.DataFrame(sim_returns, columns=self.cov_matrix.columns)
-
-        sim_port_returns = sim_returns @ self.weights
-
-        var_return = float(sim_port_returns.quantile(self.tail_probability).item())
-        var_dollars = float(abs(var_return) * self.portfolio_value)
-
-        summary = {
-            'method': 'Monte Carlo',
-            'confidence_level': self.confidence_level,
-            'tail_probability': self.tail_probability,
-            'num_simulation': n,
-            'random_seed': seed,
-            'var_return': var_return,
-            'var_percent': -var_return,
-            'var_dollars': var_dollars
-        }
-        
-        return summary
 
 
 def main():
