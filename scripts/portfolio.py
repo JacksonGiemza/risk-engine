@@ -21,7 +21,7 @@ class Portfolio:
         self._validate_portfolio(stage="processed")
         asset_returns = asset_returns.copy().dropna(how="all")
 
-        weights = self._get_weights(asset_returns.columns)    
+        weights = self.get_weights(asset_returns.columns)    
         self.weighted_returns = asset_returns.mul(weights.iloc[0],axis=1)
         self.portfolio_returns = self.weighted_returns.sum(axis=1)
 
@@ -45,6 +45,16 @@ class Portfolio:
             "net_exposure_ratio": round(net_exposure / gross_exposure, 2),
         }
         return summary
+    
+    def get_weights(self, returns_columns):
+        weights = self.portfolio[['symbol','weight']].T
+        weights.columns = weights.iloc[0]
+        weights = weights.drop(weights.index[0]).reindex(columns=returns_columns)
+
+        if weights.isna().any().any():
+            raise ValueError("Missing weights for one or more return columns.")
+        
+        return weights
 
     # -- internal methods --
     def _load_portfolio(self):
@@ -58,8 +68,6 @@ class Portfolio:
         return self.portfolio, self.ticker_list
     
     def _attach_latest_prices(self, latest_prices):
-        self.portfolio['latest_price'] = pd.Series(dtype="float64")
-
         self.portfolio['latest_price'] = [
             latest_prices.get(sym, float('nan')) for sym in self.portfolio['symbol']
         ]
@@ -76,16 +84,6 @@ class Portfolio:
     def _calculate_weights(self):
         self.portfolio["weight"] = self.portfolio['market_value'] / self.gross_exposure
         return self.portfolio
-    
-    def _get_weights(self, returns_columns):
-        weights = self.portfolio[['symbol','weight']].T
-        weights.columns = weights.iloc[0]
-        weights = weights.drop(weights.index[0]).reindex(columns=returns_columns)
-
-        if weights.isna().any().any():
-            raise ValueError("Missing weights for one or more return columns.")
-        
-        return weights
     
     def _validate_portfolio(self, stage="loaded"):
         if stage == "loaded":
