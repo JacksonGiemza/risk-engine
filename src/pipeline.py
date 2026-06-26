@@ -3,6 +3,16 @@ from src.market_data import MarketData
 from src.risk_engine import RiskEngine
 
 from datetime import datetime, timedelta
+from dataclasses import dataclass
+import pandas as pd
+
+@dataclass
+class RiskReport:
+    portfolio_summary: dict
+    historical: dict
+    parametric: dict
+    monte_carlo: dict
+    worst_days: pd.DataFrame
 
 class RiskPipeline:
     def __init__(self, config):
@@ -41,14 +51,13 @@ class RiskPipeline:
                                                         seed=self.config["random_seed"])
         worst_days = risk_engine.worst_days(n=self.config["num_worst_days"])
 
-        summary = {
-            "portfolio_summary": portfolio_summary,
-            "historical": historical_var,
-            "parametric": parametric_var,
-            "monte_carlo": monte_carlo_var,
-            "worst_days": worst_days
-        }
-        return summary 
+        return RiskReport(
+            portfolio_summary=portfolio_summary,
+            historical=historical_var,
+            parametric=parametric_var,
+            monte_carlo=monte_carlo_var,
+            worst_days=worst_days
+        )
 
 
 def main():
