@@ -3,6 +3,7 @@ import pandas as pd
 
 from src.pipeline import RiskPipeline
 
+
 st.set_page_config(
     page_title="Portfolio Risk Dashboard",
     layout="wide"
@@ -12,9 +13,6 @@ st.title("Portfolio Risk Dashboard")
 st.caption("Historical, Parametric, and Monte Carlo VaR / Expected Shortfall")
 
 
-# --------------------
-# Sidebar controls
-# --------------------
 st.sidebar.header("Configuration")
 
 portfolio_path = st.sidebar.text_input(
@@ -57,9 +55,6 @@ num_worst_days = st.sidebar.number_input(
 run_button = st.sidebar.button("Run Risk Analysis")
 
 
-# --------------------
-# Pipeline runner
-# --------------------
 @st.cache_data
 def run_pipeline(config):
     pipeline = RiskPipeline(config)
@@ -79,64 +74,65 @@ if run_button:
     }
 
     with st.spinner("Running risk analysis..."):
-        results = run_pipeline(config)
+        report = run_pipeline(config)
 
-    portfolio_summary = results["portfolio_summary"]
-    historical = results["historical"]
-    parametric = results["parametric"]
-    monte_carlo = results["monte_carlo"]
-    worst_days = results["worst_days"]
-
-    # --------------------
-    # Portfolio summary
-    # --------------------
     st.subheader("Portfolio Summary")
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Gross Exposure", f"${portfolio_summary['gross_exposure']:,.0f}")
-    col2.metric("Net Exposure", f"${portfolio_summary['net_exposure']:,.0f}")
-    col3.metric("Long Exposure", f"${portfolio_summary['long_exposure']:,.0f}")
-    col4.metric("Short Exposure", f"${portfolio_summary['short_exposure']:,.0f}")
+    col1.metric(
+        "Gross Exposure",
+        f"${report.portfolio_summary['gross_exposure']:,.0f}"
+    )
 
-    # --------------------
-    # Risk summary
-    # --------------------
+    col2.metric(
+        "Net Exposure",
+        f"${report.portfolio_summary['net_exposure']:,.0f}"
+    )
+
+    col3.metric(
+        "Long Exposure",
+        f"${report.portfolio_summary['long_exposure']:,.0f}"
+    )
+
+    col4.metric(
+        "Short Exposure",
+        f"${report.portfolio_summary['short_exposure']:,.0f}"
+    )
+
     st.subheader("Risk Summary")
 
     risk_table = pd.DataFrame([
         {
             "Method": "Historical",
-            "VaR Return": historical["var_return"],
-            "VaR $": historical["var_dollars"],
-            "ES Return": historical["es_return"],
-            "ES $": historical["es_dollars"],
+            "VaR Return": report.historical["var_return"],
+            "VaR $": report.historical["var_dollars"],
+            "ES Return": report.historical["es_return"],
+            "ES $": report.historical["es_dollars"],
         },
         {
             "Method": "Parametric",
-            "VaR Return": parametric["var_return"],
-            "VaR $": parametric["var_dollars"],
-            "ES Return": parametric["es_return"],
-            "ES $": parametric["es_dollars"],
+            "VaR Return": report.parametric["var_return"],
+            "VaR $": report.parametric["var_dollars"],
+            "ES Return": report.parametric["es_return"],
+            "ES $": report.parametric["es_dollars"],
         },
         {
             "Method": "Monte Carlo",
-            "VaR Return": monte_carlo["var_return"],
-            "VaR $": monte_carlo["var_dollars"],
-            "ES Return": monte_carlo["es_return"],
-            "ES $": monte_carlo["es_dollars"],
+            "VaR Return": report.monte_carlo["var_return"],
+            "VaR $": report.monte_carlo["var_dollars"],
+            "ES Return": report.monte_carlo["es_return"],
+            "ES $": report.monte_carlo["es_dollars"],
         },
     ])
 
     st.dataframe(risk_table, use_container_width=True)
 
-    # --------------------
-    # Worst days
-    # --------------------
     st.subheader("Worst Trading Days")
 
-    worst_days_display = worst_days.reset_index()
+    worst_days_display = report.worst_days.reset_index()
     st.dataframe(worst_days_display, use_container_width=True)
 
 else:
     st.info("Configure the sidebar and click **Run Risk Analysis**.")
+    
