@@ -1,3 +1,4 @@
+from src.models import PortfolioSummary
 import pandas as pd
 
 class Portfolio:
@@ -36,15 +37,14 @@ class Portfolio:
         gross_exposure = float(self.portfolio["abs_exposure"].sum())
         net_exposure = long_exposure + short_exposure
 
-        summary = {
-            "total_market_value": total_market_value,
-            "long_exposure": long_exposure,
-            "short_exposure": abs(short_exposure),
-            "gross_exposure": gross_exposure,
-            "net_exposure": net_exposure,
-            "net_exposure_ratio": net_exposure / gross_exposure
-        }
-        return summary
+        return PortfolioSummary(
+            total_market_value=total_market_value,
+            gross_exposure=gross_exposure,
+            net_exposure=net_exposure,
+            long_exposure=long_exposure,
+            short_exposure=short_exposure,
+            net_exposure_ratio=net_exposure / gross_exposure
+        )
     
     def get_weights(self, returns_columns):
         weights = (
