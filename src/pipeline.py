@@ -9,30 +9,30 @@ from src.models import RiskReport, RiskConfig, PortfolioSummary, RiskMetrics
 
 class RiskPipeline:
     def __init__(self, config: RiskConfig) -> None:
-        self.config: RiskConfig = config
+        self.config = config
 
     def run(self) -> RiskReport:
-        start_date: str = self._resolve_start_date()
+        start_date = self._resolve_start_date()
 
-        portfolio: Portfolio = Portfolio(self.config.portfolio_path)
+        portfolio = Portfolio(self.config.portfolio_path)
 
-        market_data: MarketData = MarketData(
+        market_data = MarketData(
             tickers=portfolio.ticker_list,
             start_date=start_date,
             end_date=self.config.end_date,
         )
 
-        asset_returns: pd.DataFrame = market_data.get_asset_returns()
-        latest_prices: dict[str, float] = market_data.get_latest_prices()
+        asset_returns = market_data.get_asset_returns()
+        latest_prices = market_data.get_latest_prices()
 
         portfolio.process_port(latest_prices)
 
-        portfolio_returns: pd.Series = portfolio.calculate_portfolio_returns(asset_returns)
-        portfolio_summary: PortfolioSummary = portfolio.portfolio_summary()
-        portfolio_value: float = portfolio_summary.gross_exposure
-        weights: pd.Series = portfolio.get_weights(asset_returns.columns)
+        portfolio_returns = portfolio.calculate_portfolio_returns(asset_returns)
+        portfolio_summary = portfolio.portfolio_summary()
+        portfolio_value = portfolio_summary.gross_exposure
+        weights = portfolio.get_weights(asset_returns.columns)
 
-        risk_engine: RiskEngine = RiskEngine(
+        risk_engine = RiskEngine(
             portfolio_returns=portfolio_returns,
             asset_returns=asset_returns,
             weights=weights,
@@ -40,18 +40,17 @@ class RiskPipeline:
             confidence_level=self.config.confidence_level,
         )
 
-        historical: RiskMetrics = risk_engine.historical_var()
-        parametric: RiskMetrics = risk_engine.parametric_var()
-        monte_carlo: RiskMetrics = risk_engine.monte_carlo_var(
+        historical = risk_engine.historical_var()
+        parametric = risk_engine.parametric_var()
+        monte_carlo = risk_engine.monte_carlo_var(
             n=self.config.num_simulations,
-            seed=self.config.random_seed,
-        )
+            seed=self.config.random_seed)
 
-        worst_days: pd.DataFrame = risk_engine.worst_days(
+        worst_days = risk_engine.worst_days(
             n=self.config.num_worst_days
         )
 
-        risk_table: pd.DataFrame = pd.DataFrame([
+        risk_table = pd.DataFrame([
             {
                 "Method": historical.method,
                 "VaR Return": historical.var_return,
@@ -94,3 +93,4 @@ class RiskPipeline:
             ).strftime("%Y-%m-%d")
 
         return self.config.start_date
+    
