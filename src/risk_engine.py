@@ -1,158 +1,165 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
+
 from src.models import RiskMetrics
 
 
 class RiskEngine:
-    def __init__(self, portfolio_returns, asset_returns, weights, portfolio_value, confidence_level):
-        if portfolio_value > 0:
-            self.portfolio_value = portfolio_value
-        else:
+    def __init__(
+        self,
+        portfolio_returns: pd.Series,
+        asset_returns: pd.DataFrame,
+        weights: pd.Series,
+        portfolio_value: float,
+        confidence_level: float,
+    ) -> None:
+        if portfolio_value <= 0:
             raise ValueError("portfolio_value should be greater than 0.")
 
-        if 0 < confidence_level < 1:
-            self.confidence_level = confidence_level
-        else:
+        if not (0 < confidence_level < 1):
             raise ValueError("confidence_level should be between 0 and 1.")
-        
-        self.portfolio_returns = portfolio_returns
 
-        if self.portfolio_returns.empty:
-            raise ValueError("Portfolio Returns Series is Empty.")
-
-        self.asset_returns = asset_returns.copy().dropna()
-
-        if self.asset_returns.empty:
-            raise ValueError("Asset Returns DataFrame is Empty.")
-
-        self.tail_probability = 1 - self.confidence_level
-
-        self.weights = weights
+        if portfolio_returns.empty:
+            raise ValueError("Portfolio returns Series is empty.")
 
         if weights.empty:
-            raise ValueError("Weights series is empty.")
+            raise ValueError("Weights Series is empty.")
 
-        self.cov_matrix = self.asset_returns.cov()
-        self.cov_matrix.index.name = None
-        self.cov_matrix.columns.name = None
+        self.portfolio_value: float = portfolio_value
+        self.confidence_level: float = confidence_level
+        self.tail_probability: float = 1 - confidence_level
 
-        if (self.weights.index != self.cov_matrix.columns).all():
-            raise ValueError("weights and cov_matrix columns unaligned.")
+        self.portfolio_returns: pd.Series = portfolio_returns.copy().dropna()
 
-        self.mean_vector = self.asset_returns.mean()
+        if self.portfolio_returns.empty:
+            raise ValueError("Portfolio returns Series is empty after dropping missing values.")
 
+        self.asset_returns: pd.DataFrame = asset_returns.copy().dropna()
 
-    def historical_var(self):
-        var_return = float(self.portfolio_returns.quantile(self.tail_probability))
-        var_dollars  = float(self.portfolio_value * abs(var_return))
+        if self.asset_returns.empty:
+            raise ValueError("Asset returns DataFrame is empty after dropping missing values.")
 
-        tail_losses = self.portfolio_returns[self.portfolio_returns <= var_return]
-        es_return = float(tail_losses.mean())
-        es_dollars = float(abs(es_return) * self.portfolio_value)
+        self.weights: pd.Series = weights
+
+        self.covariance_matrix: pd.DataFrame = self.asset_returns.cov()
+        self.covariance_matrix.index.name = None
+        self.covariance_matrix.columns.name = None
+
+        if not self.weights.index.equals(self.covariance_matrix.columns):
+            raise ValueError("weights and covariance matrix columns are not aligned.")
+
+        self.mean_returns: pd.Series = self.asset_returns.mean()
+
+    def historical_var(self) -> RiskMetrics:
+        var_return: float = float(self.portfolio_returns.quantile(self.tail_probability))
+        var_dollars: float = float(abs(var_return) * self.portfolio_value)
+
+        tail_losses: pd.Series = self.portfolio_returns[
+            self.portfolio_returns <= var_return
+        ]
+
+        es_return: float = float(tail_losses.mean())
+        es_dollars: float = float(abs(es_return) * self.portfolio_value)
 
         return RiskMetrics(
             method="Historical",
             confidence_level=self.confidence_level,
             tail_probability=self.tail_probability,
-
             var_return=var_return,
             var_percent=abs(var_return),
             var_dollars=var_dollars,
-
             es_return=es_return,
             es_percent=abs(es_return),
             es_dollars=es_dollars,
         )
-    
-    def parametric_var(self):
-        variance = self.weights.T @ self.cov_matrix @ self.weights
-        volatility = float(np.sqrt(variance))
 
-        z_score = float(norm.ppf(1 - self.tail_probability))
+    def parametric_var(self) -> RiskMetrics:
+        variance: float = float(
+            self.weights.T @ self.covariance_matrix @ self.weights
+        )
 
-        var_percent = z_score * volatility
-        var_return = -var_percent
-        var_dollars = float(z_score * volatility * self.portfolio_value)
-        
-        es_percent = float((volatility * norm.pdf(z_score)) / self.tail_probability)
-        es_dollars = float(es_percent * self.portfolio_value)
+        volatility: float = float(np.sqrt(variance))
+        z_score: float = float(norm.ppf(1 - self.tail_probability))
+
+        var_percent: float = z_score * volatility
+        var_return: float = -var_percent
+        var_dollars: float = float(var_percent * self.portfolio_value)
+
+        es_percent: float = float(
+            (volatility * norm.pdf(z_score)) / self.tail_probability
+        )
+        es_return: float = -es_percent
+        es_dollars: float = float(es_percent * self.portfolio_value)
 
         return RiskMetrics(
             method="Parametric",
             confidence_level=self.confidence_level,
             tail_probability=self.tail_probability,
-
             var_return=var_return,
             var_percent=var_percent,
             var_dollars=var_dollars,
-
-            es_return=-es_percent,
+            es_return=es_return,
             es_percent=es_percent,
             es_dollars=es_dollars,
-        )    
-    
-    def monte_carlo_var(self, n=10000, seed=42):
+        )
+
+    def monte_carlo_var(
+        self,
+        n: int = 10_000,
+        seed: int = 42,
+    ) -> RiskMetrics:
         np.random.seed(seed)
-        sim = np.random.multivariate_normal(self.mean_vector, self.cov_matrix, n)
-        sim = pd.DataFrame(sim, columns=self.cov_matrix.columns)
 
-        sim_returns = sim @ self.weights
+        simulated_asset_returns = np.random.multivariate_normal(
+            self.mean_returns,
+            self.covariance_matrix,
+            n,
+        )
 
-        var_return = float(sim_returns.quantile(self.tail_probability).item())
-        var_dollars = float(abs(var_return) * self.portfolio_value)
-        
-        tail_loss = sim_returns[sim_returns <= var_return]
-        es_return = float(tail_loss.mean())
-        es_dollars = float(abs(es_return) * self.portfolio_value)
+        simulated_asset_returns = pd.DataFrame(
+            simulated_asset_returns,
+            columns=self.covariance_matrix.columns,
+        )
+
+        simulated_portfolio_returns: pd.Series = simulated_asset_returns @ self.weights
+
+        var_return: float = float(
+            simulated_portfolio_returns.quantile(self.tail_probability)
+        )
+        var_dollars: float = float(abs(var_return) * self.portfolio_value)
+
+        tail_losses: pd.Series = simulated_portfolio_returns[
+            simulated_portfolio_returns <= var_return
+        ]
+
+        es_return: float = float(tail_losses.mean())
+        es_dollars: float = float(abs(es_return) * self.portfolio_value)
 
         return RiskMetrics(
             method="Monte Carlo",
             confidence_level=self.confidence_level,
             tail_probability=self.tail_probability,
-
             var_return=var_return,
             var_percent=abs(var_return),
             var_dollars=var_dollars,
-
             es_return=es_return,
             es_percent=abs(es_return),
             es_dollars=es_dollars,
-        )    
-    
-    def worst_days(self, n=10):
-        worst_return = self.portfolio_returns[self.portfolio_returns < 0].nsmallest(n)
-        worst_dollar = abs(worst_return * self.portfolio_value)
+        )
 
-        worst_df = pd.DataFrame({'Return': worst_return, 'Dollar Loss': worst_dollar})
+    def worst_days(self, n: int = 10) -> pd.DataFrame:
+        worst_returns: pd.Series = self.portfolio_returns[
+            self.portfolio_returns < 0
+        ].nsmallest(n)
+
+        worst_dollars: pd.Series = abs(worst_returns * self.portfolio_value)
+
+        worst_df: pd.DataFrame = pd.DataFrame(
+            {
+                "Return": worst_returns,
+                "Dollar Loss": worst_dollars,
+            }
+        )
 
         return worst_df
-
-
-def main():
-    from market_data import MarketData
-    from portfolio import Portfolio
-
-    port = Portfolio(r"data\raw\portfolio\portfolio.csv")
-
-    md = MarketData(tickers=port.ticker_list, start_date='2026-05-18',end_date='2026-06-17')
-    returns = md.get_asset_returns()
-
-
-    latest_prices = md.get_latest_prices()
-    port.process_port(latest_prices)    
-
-    port_returns = port.calculate_portfolio_returns(returns)
-    port_value = port.portfolio_summary()['gross_exposure']
-    weights = port.get_weights(returns.columns)
-
-    re = RiskEngine(portfolio_returns=port_returns, asset_returns=returns, weights=weights, portfolio_value=port_value, confidence_level=0.99)
-
-    print(re.historical_var())
-    print()
-    print(re.parametric_var())
-    print()
-    print(re.monte_carlo_var())
-
-if __name__ == "__main__":
-    main()
