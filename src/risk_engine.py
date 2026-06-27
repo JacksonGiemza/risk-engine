@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
+from src.models import RiskMetrics
+
 
 class RiskEngine:
     def __init__(self, portfolio_returns, asset_returns, weights, portfolio_value, confidence_level):
@@ -49,19 +51,19 @@ class RiskEngine:
         es_return = float(tail_losses.mean())
         es_dollars = float(abs(es_return) * self.portfolio_value)
 
-        summary = {
-            'method': 'Historical',
-            'confidence_level': self.confidence_level,
-            'tail_probability': self.tail_probability,
-            'var_return': var_return,
-            'var_percent': abs(var_return),
-            'var_dollars': var_dollars,
-            'es_return': es_return,
-            'es_percent': abs(es_return),
-            'es_dollars': es_dollars
-        } 
+        return RiskMetrics(
+            method="Historical",
+            confidence_level=self.confidence_level,
+            tail_probability=self.tail_probability,
 
-        return summary
+            var_return=var_return,
+            var_percent=abs(var_return),
+            var_dollars=var_dollars,
+
+            es_return=es_return,
+            es_percent=abs(es_return),
+            es_dollars=es_dollars,
+        )
     
     def parametric_var(self):
         variance = self.weights.T @ self.cov_matrix @ self.weights
@@ -76,19 +78,19 @@ class RiskEngine:
         es_percent = float((volatility * norm.pdf(z_score)) / self.tail_probability)
         es_dollars = float(es_percent * self.portfolio_value)
 
-        summary = {
-            'method': 'Parametric',
-            'confidence_level': self.confidence_level,
-            'tail_probability': self.tail_probability,
-            'var_return': var_return,
-            'var_percent': var_percent,
-            'var_dollars': var_dollars,
-            'es_return': -es_percent,
-            'es_percent': es_percent,
-            'es_dollars': es_dollars
-        } 
+        return RiskMetrics(
+            method="Parametric",
+            confidence_level=self.confidence_level,
+            tail_probability=self.tail_probability,
 
-        return summary
+            var_return=var_return,
+            var_percent=var_percent,
+            var_dollars=var_dollars,
+
+            es_return=-es_percent,
+            es_percent=es_percent,
+            es_dollars=es_dollars,
+        )    
     
     def monte_carlo_var(self, n=10000, seed=42):
         np.random.seed(seed)
@@ -104,19 +106,19 @@ class RiskEngine:
         es_return = float(tail_loss.mean())
         es_dollars = float(abs(es_return) * self.portfolio_value)
 
-        summary = {
-            'method': 'Monte Carlo',
-            'confidence_level': self.confidence_level,
-            'tail_probability': self.tail_probability,
-            'var_return': var_return,
-            'var_percent': abs(var_return),
-            'var_dollars': var_dollars,
-            'es_return': es_return,
-            'es_percent': abs(es_return),
-            'es_dollars': es_dollars
-        }
-        
-        return summary
+        return RiskMetrics(
+            method="Monte Carlo",
+            confidence_level=self.confidence_level,
+            tail_probability=self.tail_probability,
+
+            var_return=var_return,
+            var_percent=abs(var_return),
+            var_dollars=var_dollars,
+
+            es_return=es_return,
+            es_percent=abs(es_return),
+            es_dollars=es_dollars,
+        )    
     
     def worst_days(self, n=10):
         worst_return = self.portfolio_returns[self.portfolio_returns < 0].nsmallest(n)
