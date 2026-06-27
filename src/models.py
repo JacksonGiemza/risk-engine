@@ -37,3 +37,14 @@ class PortfolioSummary:
     long_exposure: float
     short_exposure: float
     net_exposure_ratio: float
+
+@dataclass(frozen=True)
+class RiskConfig:
+    portfolio_path: str
+    start_date: str | None
+    end_date: str
+    lookback_days: int
+    confidence_level: float
+    num_simulations: int
+    random_seed: int
+    num_worst_days: int  

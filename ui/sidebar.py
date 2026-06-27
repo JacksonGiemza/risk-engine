@@ -1,5 +1,5 @@
 import streamlit as st
-
+from src.models import RiskConfig
 
 def render_sidebar() -> tuple[dict, bool]:
     st.sidebar.header("Configuration")
@@ -54,15 +54,15 @@ def render_sidebar() -> tuple[dict, bool]:
 
     run_analysis = st.sidebar.button("Run Risk Analysis")
 
-    config = {
-        "portfolio_path": portfolio_path,
-        "start_date": None,
-        "end_date": end_date,
-        "lookback_days": int(lookback_days),
-        "confidence_level": float(confidence_level),
-        "num_simulations": int(num_simulations),
-        "random_seed": int(random_seed),
-        "num_worst_days": int(num_worst_days),
-    }
+    config = RiskConfig(
+        portfolio_path=portfolio_path,
+        start_date=None,
+        end_date=end_date,
+        lookback_days=int(lookback_days),
+        confidence_level=float(confidence_level),
+        num_simulations=int(num_simulations),
+        random_seed=int(random_seed),
+        num_worst_days=int(num_worst_days),
+    )
 
     return config, run_analysis
