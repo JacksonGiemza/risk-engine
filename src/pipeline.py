@@ -1,18 +1,10 @@
 from src.portfolio import Portfolio
 from src.market_data import MarketData
 from src.risk_engine import RiskEngine
+from src.models import RiskReport, RiskMetrics
 
 from datetime import datetime, timedelta
-from dataclasses import dataclass
 import pandas as pd
-
-@dataclass
-class RiskReport:
-    portfolio_summary: dict
-    historical: dict
-    parametric: dict
-    monte_carlo: dict
-    worst_days: pd.DataFrame
 
 class RiskPipeline:
     def __init__(self, config):
@@ -36,7 +28,7 @@ class RiskPipeline:
         portfolio.process_port(latest_prices)
         portfolio_returns = portfolio.calculate_portfolio_returns(asset_returns)
         portfolio_summary = portfolio.portfolio_summary()
-        portfolio_value = portfolio_summary['gross_exposure']
+        portfolio_value = portfolio_summary.gross_exposure
         weights = portfolio.get_weights(asset_returns.columns)
         
         risk_engine = RiskEngine(portfolio_returns=portfolio_returns,
@@ -45,20 +37,49 @@ class RiskPipeline:
                                       portfolio_value=portfolio_value,
                                       confidence_level=self.config['confidence_level'])
 
-        historical_var = risk_engine.historical_var()
-        parametric_var = risk_engine.parametric_var()
-        monte_carlo_var = risk_engine.monte_carlo_var(n=self.config["num_simulations"], 
-                                                        seed=self.config["random_seed"])
+        historical = risk_engine.historical_var()
+        parametric = risk_engine.parametric_var()
+        monte_carlo = risk_engine.monte_carlo_var(
+            n=self.config["num_simulations"],
+            seed=self.config["random_seed"]
+        )
+
         worst_days = risk_engine.worst_days(n=self.config["num_worst_days"])
+
+        risk_table = pd.DataFrame([
+            {
+                "Method": historical.method,
+                "VaR Return": historical.var_return,
+                "VaR $": historical.var_dollars,
+                "ES Return": historical.es_return,
+                "ES $": historical.es_dollars,
+            },
+            {
+                "Method": parametric.method,
+                "VaR Return": parametric.var_return,
+                "VaR $": parametric.var_dollars,
+                "ES Return": parametric.es_return,
+                "ES $": parametric.es_dollars,
+            },
+            {
+                "Method": monte_carlo.method,
+                "VaR Return": monte_carlo.var_return,
+                "VaR $": monte_carlo.var_dollars,
+                "ES Return": monte_carlo.es_return,
+                "ES $": monte_carlo.es_dollars,
+            },
+        ])
 
         return RiskReport(
             portfolio_summary=portfolio_summary,
-            historical=historical_var,
-            parametric=parametric_var,
-            monte_carlo=monte_carlo_var,
-            worst_days=worst_days
+            historical=historical,
+            parametric=parametric,
+            monte_carlo=monte_carlo,
+            holdings=portfolio.portfolio.copy(),
+            portfolio_returns=portfolio_returns.copy(),
+            risk_table=risk_table,
+            worst_days=worst_days,
         )
-
 
 def main():
     config = {
