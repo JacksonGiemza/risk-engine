@@ -1,10 +1,20 @@
 from src.pipeline import RiskPipeline
 from src.risk_engine import RiskEngine
-from src.models import RiskConfig, RiskReport
+from src.models import (
+    RiskConfig,
+    RiskReport,
+    BacktestResult,
+    BinomialResult,
+    KupiecResult,
+    ChristoffersenResult,
+    ChristoffersenComponent,
+    TrafficLightResult,
+)
 
 import pandas as pd
 import numpy as np
 from scipy import stats
+
 
 class Backtesting:
     def __init__(self, risk_engine: RiskEngine, risk_report: RiskReport, window=250):
@@ -13,17 +23,20 @@ class Backtesting:
         self.window = window
 
     def run(self, asset_returns):
-        results = {}
+        results = {"summary":{}, "breach_series": {}}
 
         for method in ["historical", "parametric", "monte_carlo"]:
             self.breach = self.rolling_backtest(asset_returns, method=method)
 
-            results[method] = {
-                "binomial": self.binomial_test(),
-                "kupiec": self.kupiec_test(),
-                "christoffersen": self.christoffersen_test(),
-                "traffic_light": self.traffic_light_test(),
-            }
+            results["summary"][method] = BacktestResult(
+                method=method,
+                binomial=self.binomial_test(),
+                kupiec=self.kupiec_test(),
+                christoffersen=self.christoffersen_test(),
+                traffic_light=self.traffic_light_test()
+            )
+            results["breach_series"][method] = self.breach.copy()
+
         return results
     
     def rolling_backtest(self, asset_returns: pd.DataFrame, method: str = "parametric") -> pd.DataFrame:
@@ -74,7 +87,6 @@ class Backtesting:
 
             self.breach.at[date, "var_return"] = var_return
             self.breach.at[date, "breach"] = actual_return < var_return
-            self.breach["breach"]
 
         return self.breach.dropna()
             
@@ -86,14 +98,16 @@ class Backtesting:
         p = 1 - self.risk_engine.confidence_level
 
         res = stats.binomtest(x, n=n, p=p, alternative="two-sided")
-        return {"p_value": res.pvalue}
-    
+
+        return BinomialResult(p_value=float(res.pvalue))
+                
     def kupiec_test(self):
         exceptions = self._exceptions()
         n_exceptions = int(exceptions.sum()) 
         n_observations = len(exceptions)
         p_expected = 1 - self.risk_engine.confidence_level
         p_empirical = n_exceptions / n_observations 
+        p_empirical = max(min(p_empirical, 1 - 1e-10), 1e-10)
 
         # Formula: -2 * ln((p_expected^x * (1-p_expected)^(n-x)) / (p_empirical^x * (1-p_empirical)^(n-x)))
         term1 = n_exceptions * np.log(p_expected) + (n_observations - n_exceptions) * np.log(1 - p_expected)
@@ -102,10 +116,10 @@ class Backtesting:
 
         p_value = 1 - stats.chi2.cdf(lr_statistic, df=1)
 
-        return {
-            "lr_statistic": lr_statistic,
-            "p_value": p_value
-        }
+        return KupiecResult(
+            lr_statistic=float(lr_statistic),
+            p_value=float(p_value)
+        )
     
     def christoffersen_test(self):
         exceptions = self._exceptions()
@@ -130,7 +144,7 @@ class Backtesting:
         n01 = np.sum((y_tm1 == 0) & (y_t == 1))
         n10 = np.sum((y_tm1 == 1) & (y_t == 0))
         n11 = np.sum((y_tm1 == 1) & (y_t == 1))
-        print(n00, n01, n10, n11)
+
         pi01 = n01 / (n00 + n01) if (n00 + n01) > 0 else 0
         pi11 = n11 / (n10 + n11) if (n10 + n11) > 0 else 0
         pi_combined = (n01 + n11) / (n00 + n01 + n10 + n11)
@@ -148,15 +162,16 @@ class Backtesting:
 
         lr_cc = lr_uc + lr_ind
         p_val_cc = 1 - stats.chi2.cdf(lr_cc, df=2)
-        return {
-            "Unconditional Coverage": {"LR": lr_uc, "p-value": p_val_uc},
-            "Independence": {"LR": lr_ind, "p-value": p_val_ind},
-            "Conditional Coverage": {"LR": lr_cc, "p-value": p_val_cc}
-        }
 
-    def traffic_light_test(self, window=250):
+        return ChristoffersenResult(
+            unconditional=ChristoffersenComponent(lr=float(lr_uc), p_value=float(p_val_uc)),
+            independence=ChristoffersenComponent(lr=float(lr_ind), p_value=float(p_val_ind)),
+            conditional=ChristoffersenComponent(lr=float(lr_cc), p_value=float(p_val_cc))
+        )
+
+    def traffic_light_test(self, traffic_window=250):
         exceptions = self._exceptions()
-        exceptions = exceptions[-window:] 
+        exceptions = exceptions[-traffic_window:] 
         alpha = 1 - self.risk_engine.confidence_level
         
         N = len(exceptions)          
@@ -175,14 +190,15 @@ class Backtesting:
             zone = "Red"
             multiplier_plus = 1.00
 
-        return {
-            "Total Days (N)": N,
-            "Observed Violations (X)": X,
-            "Expected Violations": N * alpha,
-            "Cumulative Probability": cum_prob,
-            "Basel Zone": zone,
-            "Capital Scaling Penalty (+/-)": multiplier_plus
-        }
+        return TrafficLightResult(
+            total_days=N,
+            observed_violations=X,
+            expected_violations=N * alpha,
+            cumulative_probability=float(cum_prob),
+            zone=zone,
+            capital_scaling_penalty=multiplier_plus
+        )
+        
     def _exceptions(self) -> np.ndarray:
         return (
             self.breach["breach"]
@@ -195,7 +211,6 @@ class Backtesting:
 def main():
     from src.market_data import MarketData
     from src.portfolio import Portfolio
-    import json
     config = RiskConfig(
         portfolio_path=r"data\raw\portfolio\portfolio.csv",
         start_date=None,
@@ -219,7 +234,7 @@ def main():
     risk_report = pipeline.run()
     re = RiskEngine(portfolio_value=summary.net_exposure, confidence_level=config.confidence_level)
     backtesting = Backtesting(risk_engine=re, risk_report=risk_report)
-    print(json.dumps(backtesting.run(returns),indent=4, sort_keys=True))
+    print(backtesting.run(returns))
 
 if __name__ == "__main__":
     main()

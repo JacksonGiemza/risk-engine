@@ -51,3 +51,41 @@ class RiskConfig:
     num_simulations: int
     random_seed: int
     num_worst_days: int  
+
+@dataclass
+class BinomialResult:
+    p_value: float
+
+@dataclass
+class KupiecResult:
+    lr_statistic: float
+    p_value: float
+
+@dataclass
+class ChristoffersenComponent:
+    lr: float
+    p_value: float
+
+@dataclass
+class ChristoffersenResult:
+    unconditional: ChristoffersenComponent
+    independence: ChristoffersenComponent
+    conditional: ChristoffersenComponent
+
+@dataclass
+class TrafficLightResult:
+    total_days: int
+    observed_violations: int
+    expected_violations: float
+    cumulative_probability: float
+    zone: str
+    capital_scaling_penalty: float
+
+@dataclass
+class BacktestResult:
+    method: str
+
+    binomial: BinomialResult
+    kupiec: KupiecResult
+    christoffersen: ChristoffersenResult
+    traffic_light: TrafficLightResult
