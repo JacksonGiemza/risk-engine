@@ -2,3 +2,4 @@ This is my current pet project im developing for fun. I plan to build this out i
 
 References:<br>
 - Options Futures and Other Derivatives by John C Hull
+- https://www.mathworks.com/help/risk/overview-of-var-backtesting.html

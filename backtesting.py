@@ -1,7 +1,9 @@
 from src.pipeline import RiskPipeline
 from src.risk_engine import RiskEngine
 from src.models import RiskConfig, RiskReport
+
 import pandas as pd
+from scipy.stats import binomtest
 
 
 class Backtesting:
@@ -17,7 +19,7 @@ class Backtesting:
         returns = returns[weights.index]
         portfolio_returns = returns @ weights
 
-        breach = pd.DataFrame({
+        self.breach = pd.DataFrame({
                 "actual_return": portfolio_returns,
                 "var_return": pd.NA,
                 "breach": pd.NA
@@ -35,13 +37,20 @@ class Backtesting:
 
             actual_return = portfolio_returns.iloc[t]
 
-            breach.at[date, "var_return"] = var_return
-            breach.at[date, "breach"] = actual_return < var_return
+            self.breach.at[date, "var_return"] = var_return
+            self.breach.at[date, "breach"] = actual_return < var_return
 
-        return breach.dropna()
+        return self.breach.dropna()
             
-    def basic_backtest_summary(self):
-        pass
+    def binomial_test(self):
+        x = self.breach['breach'].sum() 
+        n = len(self.breach)
+        p = 1 - self.risk_engine.confidence_level
+
+        res = binomtest(x, n=n, p=p, alternative='two-sided')
+        p_value = res.pvalue
+        
+        return p_value
 
     def kupiec_test(self):
         pass
@@ -82,7 +91,8 @@ def main():
     re = RiskEngine(portfolio_value=summary.net_exposure, confidence_level=config.confidence_level)
     backtesting = Backtesting(risk_engine=re, risk_report=risk_report)
     
-    print(backtesting.dynamic_rolling_backtest(returns))
+    backtesting.rolling_backtest(returns)
+    print(backtesting.binomial_test())
 
 
 if __name__ == "__main__":
