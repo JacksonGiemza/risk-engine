@@ -3,8 +3,8 @@ from src.risk_engine import RiskEngine
 from src.models import RiskConfig, RiskReport
 
 import pandas as pd
-from scipy.stats import binomtest
-
+import numpy as np
+from scipy import stats
 
 class Backtesting:
     def __init__(self, risk_engine: RiskEngine, risk_report: RiskReport, window=250):
@@ -47,13 +47,26 @@ class Backtesting:
         n = len(self.breach)
         p = 1 - self.risk_engine.confidence_level
 
-        res = binomtest(x, n=n, p=p, alternative='two-sided')
+        res = stats.binomtest(x, n=n, p=p, alternative='two-sided')
         p_value = res.pvalue
         
         return p_value
 
     def kupiec_test(self):
-        pass
+        n_exceptions = self.breach['breach'].sum() 
+        n_observations = len(self.breach)
+        p_expected = 1 - self.risk_engine.confidence_level
+        p_empirical = n_exceptions / n_observations 
+
+        # Formula: -2 * ln((p_expected^x * (1-p_expected)^(n-x)) / (p_empirical^x * (1-p_empirical)^(n-x)))
+        term1 = n_exceptions * np.log(p_expected) + (n_observations - n_exceptions) * np.log(1 - p_expected)
+        term2 = n_exceptions * np.log(p_empirical) + (n_observations - n_exceptions) * np.log(1 - p_empirical)
+        lr_statistic = -2 * (term1 - term2)
+
+        p_value = 1 - stats.chi2.cdf(lr_statistic, df=1)
+
+        return lr_statistic, p_value
+        
 
     def christoffersen_test(self):
         pass
