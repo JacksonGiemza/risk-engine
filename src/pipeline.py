@@ -33,22 +33,20 @@ class RiskPipeline:
         weights = portfolio.get_weights(asset_returns.columns)
 
         risk_engine = RiskEngine(
-            portfolio_returns=portfolio_returns,
-            asset_returns=asset_returns,
-            weights=weights,
             portfolio_value=portfolio_value,
             confidence_level=self.config.confidence_level,
+            n=self.config.num_simulations,
+            seed=self.config.random_seed
         )
 
-        historical = risk_engine.historical_var()
-        parametric = risk_engine.parametric_var()
-        monte_carlo = risk_engine.monte_carlo_var(
-            n=self.config.num_simulations,
-            seed=self.config.random_seed)
+        historical = risk_engine.historical_var(portfolio_returns)
+        parametric = risk_engine.parametric_var(weights, asset_returns)
+        monte_carlo = risk_engine.monte_carlo_var(weights, asset_returns)
 
         worst_days = risk_engine.worst_days(
+            portfolio_returns=portfolio_returns,
             n=self.config.num_worst_days
-        )
+            )
 
         risk_table = pd.DataFrame([
             {
@@ -83,6 +81,8 @@ class RiskPipeline:
             portfolio_returns=portfolio_returns.copy(),
             risk_table=risk_table,
             worst_days=worst_days,
+            weights=weights,
+            asset_returns=asset_returns
         )
 
     def _resolve_start_date(self) -> str:

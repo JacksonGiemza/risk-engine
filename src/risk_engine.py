@@ -6,7 +6,7 @@ from src.models import RiskMetrics
 
 
 class RiskEngine:
-    def __init__(self, portfolio_value: float, confidence_level: float) -> None:
+    def __init__(self, portfolio_value: float, confidence_level: float, n: int = 10_000, seed: int = 42) -> None:
         if portfolio_value <= 0:
             raise ValueError("portfolio_value should be greater than 0.")
 
@@ -16,6 +16,9 @@ class RiskEngine:
         self.portfolio_value = portfolio_value
         self.confidence_level = confidence_level
         self.tail_probability = 1 - confidence_level
+        
+        self.n = n
+        self.seed = seed
 
     def historical_var(self, portfolio_returns) -> RiskMetrics:
         """
@@ -41,10 +44,11 @@ class RiskEngine:
             es_dollars=es_dollars,
         )
 
-    def parametric_var(self, weights, asset_returns) -> RiskMetrics:
+    def parametric_var(self, weights: pd.Series, asset_returns: pd.DataFrame) -> RiskMetrics:
         """
         Estimate portfolio VaR with Inverse Cumulative Distribution Function
         """
+        asset_returns = asset_returns.copy().dropna()
         covariance_matrix = asset_returns.cov()
         covariance_matrix.index.name = None
         covariance_matrix.columns.name = None
@@ -78,10 +82,11 @@ class RiskEngine:
             es_dollars=es_dollars,
         )
 
-    def monte_carlo_var(self, weights, asset_returns, n: int = 10_000, seed: int = 42) -> RiskMetrics:
+    def monte_carlo_var(self, weights: pd.Series, asset_returns: pd.DataFrame) -> RiskMetrics:
         """
         Estimate VaR using multivariate Monte Carlo simulation
         """
+        asset_returns = asset_returns.copy().dropna()
         covariance_matrix = asset_returns.cov()
         covariance_matrix.index.name = None
         covariance_matrix.columns.name = None
@@ -91,8 +96,8 @@ class RiskEngine:
         
         mean_returns = asset_returns.mean()
 
-        rng = np.random.default_rng(seed)
-        simulated_asset_returns = rng.multivariate_normal(mean_returns, covariance_matrix, n)
+        rng = np.random.default_rng(self.seed)
+        simulated_asset_returns = rng.multivariate_normal(mean_returns, covariance_matrix, self.n)
         simulated_asset_returns = pd.DataFrame(simulated_asset_returns, columns=covariance_matrix.columns)
         simulated_portfolio_returns: pd.Series = simulated_asset_returns @ weights
 

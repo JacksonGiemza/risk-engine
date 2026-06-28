@@ -29,6 +29,9 @@ class RiskReport:
     risk_table: pd.DataFrame
     worst_days: pd.DataFrame
 
+    weights: pd.Series
+    asset_returns: pd.DataFrame
+
 @dataclass
 class PortfolioSummary:
     total_market_value: float
