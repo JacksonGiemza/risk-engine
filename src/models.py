@@ -50,7 +50,8 @@ class RiskConfig:
     confidence_level: float
     num_simulations: int
     random_seed: int
-    num_worst_days: int  
+    num_worst_days: int
+    backtest_lookback: int  
 
 @dataclass
 class BinomialResult:
@@ -89,3 +90,8 @@ class BacktestResult:
     kupiec: KupiecResult
     christoffersen: ChristoffersenResult
     traffic_light: TrafficLightResult
+
+@dataclass
+class BacktestReport:
+    summary: dict[str, BacktestResult]
+    breach_series: dict[str, pd.DataFrame]

@@ -1,14 +1,12 @@
-from src.pipeline import RiskPipeline
 from src.risk_engine import RiskEngine
 from src.models import (
-    RiskConfig,
-    RiskReport,
     BacktestResult,
     BinomialResult,
     KupiecResult,
     ChristoffersenResult,
     ChristoffersenComponent,
     TrafficLightResult,
+    BacktestReport
 )
 
 import pandas as pd
@@ -17,9 +15,9 @@ from scipy import stats
 
 
 class Backtesting:
-    def __init__(self, risk_engine: RiskEngine, risk_report: RiskReport, window=250):
+    def __init__(self, risk_engine: RiskEngine, weights: pd.Series, window=250):
         self.risk_engine = risk_engine
-        self.risk_report = risk_report
+        self.weights = weights
         self.window = window
 
     def run(self, asset_returns):
@@ -37,11 +35,14 @@ class Backtesting:
             )
             results["breach_series"][method] = self.breach.copy()
 
-        return results
+        return BacktestReport(
+            summary=results["summary"],
+            breach_series=results["breach_series"]
+        )
     
     def rolling_backtest(self, asset_returns: pd.DataFrame, method: str = "parametric") -> pd.DataFrame:
         returns = asset_returns.copy().dropna()
-        weights = self.risk_report.weights
+        weights = self.weights
 
         returns = returns[weights.index]
         portfolio_returns = returns @ weights
@@ -207,34 +208,3 @@ class Backtesting:
             .astype(int)
             .to_numpy()
         )
-
-def main():
-    from src.market_data import MarketData
-    from src.portfolio import Portfolio
-    config = RiskConfig(
-        portfolio_path=r"data\raw\portfolio\portfolio.csv",
-        start_date=None,
-        end_date="2026-06-17",
-        lookback_days=252,
-        confidence_level=0.99,
-        num_simulations=10000,
-        random_seed=42,
-        num_worst_days=5,
-    )
-    port = Portfolio(config.portfolio_path)
-
-    md = MarketData(tickers=port.ticker_list,start_date="2021-06-17",end_date=config.end_date)
-
-    returns = md.get_asset_returns()
-    latest_prices = md.get_latest_prices()
-    port.process_port(latest_prices)
-    summary = port.portfolio_summary()
-
-    pipeline = RiskPipeline(config)
-    risk_report = pipeline.run()
-    re = RiskEngine(portfolio_value=summary.net_exposure, confidence_level=config.confidence_level)
-    backtesting = Backtesting(risk_engine=re, risk_report=risk_report)
-    print(backtesting.run(returns))
-
-if __name__ == "__main__":
-    main()
