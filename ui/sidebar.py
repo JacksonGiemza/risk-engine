@@ -52,6 +52,14 @@ def render_sidebar() -> tuple[dict, bool]:
         step=1,
     )
 
+    backtest_lookback = st.sidebar.number_input(
+        "Backtest lookback days",
+        min_value=252,
+        max_value=5000,
+        value=1500,
+        step=252,
+    )
+
     run_analysis = st.sidebar.button("Run Risk Analysis")
 
     config = RiskConfig(
@@ -59,6 +67,7 @@ def render_sidebar() -> tuple[dict, bool]:
         start_date=None,
         end_date=end_date,
         lookback_days=int(lookback_days),
+        backtest_lookback=int(backtest_lookback),
         confidence_level=float(confidence_level),
         num_simulations=int(num_simulations),
         random_seed=int(random_seed),

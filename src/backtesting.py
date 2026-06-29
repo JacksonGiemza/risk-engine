@@ -116,7 +116,8 @@ class Backtesting:
         lr_statistic = -2 * (term1 - term2)
 
         p_value = 1 - stats.chi2.cdf(lr_statistic, df=1)
-
+        print(len(exceptions))
+        print(exceptions.sum())
         return KupiecResult(
             lr_statistic=float(lr_statistic),
             p_value=float(p_value)

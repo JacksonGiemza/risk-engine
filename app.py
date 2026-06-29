@@ -10,6 +10,7 @@ from ui.charts import (
     render_var_comparison,
 )
 from ui.tables import render_holdings, render_worst_days
+from ui.backtesting import render_backtest_summary, render_breach_chart
 
 
 st.set_page_config(
@@ -27,12 +28,20 @@ def run_pipeline(config):
     return pipeline.run()
 
 
+@st.cache_data
+def run_backtest(config):
+    pipeline = RiskPipeline(config)
+    pipeline.run()
+    return pipeline.run_backtest()
+
+
 config, run_analysis = render_sidebar()
 
 if run_analysis:
     try:
         with st.spinner("Running risk analysis..."):
             report = run_pipeline(config)
+            backtest_report = run_backtest(config)
 
         render_portfolio_metrics(report)
         render_risk_metrics(report)
@@ -40,6 +49,9 @@ if run_analysis:
         render_var_comparison(report)
         render_cumulative_returns(report)
         render_return_distribution(report)
+
+        render_backtest_summary(backtest_report)
+        render_breach_chart(backtest_report)
 
         render_holdings(report)
         render_worst_days(report)
