@@ -40,24 +40,28 @@ config, run_analysis = render_sidebar()
 if run_analysis:
     try:
         with st.spinner("Running risk analysis..."):
-            report = run_pipeline(config)
-            backtest_report = run_backtest(config)
-
-        render_portfolio_metrics(report)
-        render_risk_metrics(report)
-
-        render_var_comparison(report)
-        render_cumulative_returns(report)
-        render_return_distribution(report)
-
-        render_backtest_summary(backtest_report)
-        render_breach_chart(backtest_report)
-
-        render_holdings(report)
-        render_worst_days(report)
+            st.session_state["risk_report"] = run_pipeline(config)
+            st.session_state["backtest_report"] = run_backtest(config)
 
     except Exception as e:
         st.error(f"Risk analysis failed: {e}")
+
+if "risk_report" in st.session_state and "backtest_report" in st.session_state:
+    report = st.session_state["risk_report"]
+    backtest_report = st.session_state["backtest_report"]
+
+    render_portfolio_metrics(report)
+    render_risk_metrics(report)
+
+    render_var_comparison(report)
+    render_cumulative_returns(report)
+    render_return_distribution(report)
+
+    render_backtest_summary(backtest_report)
+    render_breach_chart(backtest_report)
+
+    render_holdings(report)
+    render_worst_days(report)
 
 else:
     st.info("Configure the sidebar and click **Run Risk Analysis**.")

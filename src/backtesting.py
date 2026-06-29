@@ -45,6 +45,10 @@ class Backtesting:
         weights = self.weights
 
         returns = returns[weights.index]
+
+        if returns.empty:
+            raise ValueError("No returns left after aligning to weights.")
+        
         portfolio_returns = returns @ weights
 
         self.breach = pd.DataFrame(
@@ -89,7 +93,7 @@ class Backtesting:
             self.breach.at[date, "var_return"] = var_return
             self.breach.at[date, "breach"] = actual_return < var_return
 
-        return self.breach.dropna()
+        return self.breach.dropna(subset=["var_return", "breach"])
             
     def binomial_test(self):
         exceptions = self._exceptions()
@@ -116,15 +120,14 @@ class Backtesting:
         lr_statistic = -2 * (term1 - term2)
 
         p_value = 1 - stats.chi2.cdf(lr_statistic, df=1)
-        print(len(exceptions))
-        print(exceptions.sum())
+
         return KupiecResult(
             lr_statistic=float(lr_statistic),
             p_value=float(p_value)
         )
     
     def christoffersen_test(self):
-        exceptions = self._exceptions()
+        exceptions = self._exceptions().astype(int)
         N = len(exceptions)
         N1 = int(exceptions.sum())
         N0 = N - N1
@@ -209,3 +212,4 @@ class Backtesting:
             .astype(int)
             .to_numpy()
         )
+        

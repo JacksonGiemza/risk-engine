@@ -6,11 +6,22 @@ import altair as alt
 def render_backtest_summary(backtest_report) -> None:
     st.subheader("VaR Backtesting")
 
+    first_method = next(iter(backtest_report.breach_series))
+    coverage_window = len(backtest_report.breach_series[first_method])
+    traffic_window = backtest_report.summary[first_method].traffic_light.total_days
+
+    col1, col2 = st.columns(2)
+    col1.metric("Coverage Test Window", f"{coverage_window:,} days")
+    col2.metric("Traffic Light Window", f"{traffic_window:,} days")
+
     rows = []
 
     for method, result in backtest_report.summary.items():
         rows.append({
             "Method": method.title(),
+            "Observations": len(backtest_report.breach_series[method]),
+            "Violations": int(backtest_report.breach_series[method]["breach"].sum()),
+            "Expected Violations": result.traffic_light.expected_violations,
             "Binomial p-value": result.binomial.p_value,
             "Kupiec LR": result.kupiec.lr_statistic,
             "Kupiec p-value": result.kupiec.p_value,
@@ -18,29 +29,11 @@ def render_backtest_summary(backtest_report) -> None:
             "Christoffersen IND p-value": result.christoffersen.independence.p_value,
             "Christoffersen CC p-value": result.christoffersen.conditional.p_value,
             "Traffic Light": result.traffic_light.zone,
-            "Violations": result.traffic_light.observed_violations,
-            "Expected Violations": result.traffic_light.expected_violations,
+            "Traffic Light Violations": result.traffic_light.observed_violations,
         })
 
     summary_df = pd.DataFrame(rows)
-
-    display_df = summary_df.copy()
-
-    pval_cols = [
-        "Binomial p-value",
-        "Kupiec p-value",
-        "Christoffersen UC p-value",
-        "Christoffersen IND p-value",
-        "Christoffersen CC p-value",
-    ]
-
-    for col in pval_cols:
-        display_df[col] = display_df[col].apply(lambda x: f"{x:.4f}")
-
-    display_df["Kupiec LR"] = display_df["Kupiec LR"].apply(lambda x: f"{x:.3f}")
-    display_df["Expected Violations"] = display_df["Expected Violations"].apply(lambda x: f"{x:.2f}")
-
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(summary_df, use_container_width=True, hide_index=True)
 
 
 def render_breach_chart(backtest_report) -> None:
