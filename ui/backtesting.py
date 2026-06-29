@@ -19,9 +19,9 @@ def render_backtest_summary(backtest_report) -> None:
     for method, result in backtest_report.summary.items():
         rows.append({
             "Method": method.title(),
-            "Observations": len(backtest_report.breach_series[method]),
-            "Violations": int(backtest_report.breach_series[method]["breach"].sum()),
-            "Expected Violations": result.traffic_light.expected_violations,
+            "Observations": result.observations,
+            "Violations": result.violations,
+            "Expected Violations": result.expected_violations,
             "Binomial p-value": result.binomial.p_value,
             "Kupiec LR": result.kupiec.lr_statistic,
             "Kupiec p-value": result.kupiec.p_value,

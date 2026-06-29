@@ -91,6 +91,10 @@ class BacktestResult:
     christoffersen: ChristoffersenResult
     traffic_light: TrafficLightResult
 
+    observations: int
+    violations: int
+    expected_violations: float
+
 @dataclass
 class BacktestReport:
     summary: dict[str, BacktestResult]

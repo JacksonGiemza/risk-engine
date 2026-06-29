@@ -26,12 +26,20 @@ class Backtesting:
         for method in ["historical", "parametric", "monte_carlo"]:
             self.breach = self.rolling_backtest(asset_returns, method=method)
 
+            exceptions = self._exceptions()
+            observations = len(exceptions)
+            violations = int(exceptions.sum())
+            expected_violations = observations * (1 - self.risk_engine.confidence_level)
+
             results["summary"][method] = BacktestResult(
                 method=method,
                 binomial=self.binomial_test(),
                 kupiec=self.kupiec_test(),
                 christoffersen=self.christoffersen_test(),
-                traffic_light=self.traffic_light_test()
+                traffic_light=self.traffic_light_test(),
+                observations=observations,
+                violations=violations,
+                expected_violations=expected_violations
             )
             results["breach_series"][method] = self.breach.copy()
 
