@@ -7,22 +7,22 @@ class InstrumentMetadata:
     asset_class: str
 
 @dataclass(slots=True)
-class ETFMetadata(InstrumentMetaData):
+class ETFMetadata(InstrumentMetadata):
     expense_ratio: float
     issuer: str
     
 @dataclass(slots=True)
-class FutureMetadata(InstrumentMetaData):
+class FutureMetadata(InstrumentMetadata):
     multiplier: float
     exchange: str
 
 @dataclass(slots=True)
-class FXMetadata(InstrumentMetaData):
+class FXMetadata(InstrumentMetadata):
     base_currency: str
     quote_currency: str
 
 @dataclass(slots=True)
-class OptionMetadata(InstrumentMetaData):
+class OptionMetadata(InstrumentMetadata):
     strike: float
     expiry: str
     multiplier: float
