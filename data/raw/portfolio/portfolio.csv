@@ -1,10 +1,10 @@
-symbol	asset_class	quantity	currency	strategy
-SPY	Equity	100	USD	Core Equity
-QQQ	Equity	50	USD	Growth
-IWM	Equity	75	USD	Small Cap
-TLT	Rates	150	USD	Rates Hedge
-GLD	Commodity	80	USD	Inflation Hedge
-USO	Commodity	-60	USD	Oil Short
-UUP	FX	200	USD	Dollar Long
-HYG	Credit	120	USD	Credit Risk
-EEM	Equity	90	USD	EM Equity
+symbol,asset_class,quantity,currency,strategy
+SPY,Equity,100,USD,Core Equity
+QQQ,Equity,50,USD,Growth
+IWM,Equity,75,USD,Small Cap
+TLT,Rates,150,USD,Rates Hedge
+GLD,Commodity,80,USD,Inflation Hedge
+USO,Commodity,-60,USD,Oil Short
+UUP,FX,200,USD,Dollar Long
+HYG,Credit,120,USD,Credit Risk
+EEM,Equity,90,USD,EM Equity
