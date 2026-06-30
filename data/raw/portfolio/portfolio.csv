@@ -1,25 +1,10 @@
-position_id,symbol,instrument_type,asset_class,quantity,currency,strategy
-1,SPY,ETF,Equity,100,USD,Core Equity
-2,SPY,ETF,Equity,50,USD,Momentum
-3,QQQ,ETF,Equity,75,USD,Growth
-4,IWM,ETF,Equity,100,USD,Small Cap
-5,EEM,ETF,Equity,90,USD,Emerging Markets
-6,HYG,ETF,Credit,120,USD,High Yield Credit
-7,LQD,ETF,Credit,80,USD,Investment Grade Credit
-8,TLT,ETF,Rates,150,USD,Duration Hedge
-9,IEF,ETF,Rates,200,USD,Intermediate Rates
-10,GLD,ETF,Commodity,80,USD,Inflation Hedge
-11,USO,ETF,Commodity,-60,USD,Oil Short
-12,UUP,ETF,FX,200,USD,USD Strength
-13,ES=F,Future,Equity,2,USD,Index Overlay
-14,NQ=F,Future,Equity,-1,USD,Tech Hedge
-15,ZN=F,Future,Rates,3,USD,Treasury Futures
-16,GC=F,Future,Commodity,1,USD,Gold Futures
-17,CL=F,Future,Commodity,-2,USD,Oil Futures
-18,EURUSD=X,FXSpot,FX,50000,USD,EUR Hedge
-19,GBPUSD=X,FXSpot,FX,-30000,USD,GBP Hedge
-20,JPY=X,FXSpot,FX,1000000,USD,JPY Exposure
-21,SPY_650C_20271217,EuropeanOption,Equity,10,USD,Covered Call
-22,SPY_550P_20271217,EuropeanOption,Equity,5,USD,Tail Hedge
-23,AAPL_250C_20271217,EuropeanOption,Equity,20,USD,Tech Upside
-24,QQQ_700P_20271217,EuropeanOption,Equity,-10,USD,Income Strategy
+symbol	asset_class	quantity	currency	strategy
+SPY	Equity	100	USD	Core Equity
+QQQ	Equity	50	USD	Growth
+IWM	Equity	75	USD	Small Cap
+TLT	Rates	150	USD	Rates Hedge
+GLD	Commodity	80	USD	Inflation Hedge
+USO	Commodity	-60	USD	Oil Short
+UUP	FX	200	USD	Dollar Long
+HYG	Credit	120	USD	Credit Risk
+EEM	Equity	90	USD	EM Equity
