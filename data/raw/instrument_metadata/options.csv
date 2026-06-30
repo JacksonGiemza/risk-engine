@@ -1,0 +1,5 @@
+symbol,underlying,option_type,strike,expiry,exercise_style,contract_multiplier,currency
+SPY_650C_20271217,SPY,Call,650,2027-12-17,European,100,USD
+SPY_550P_20271217,SPY,Put,550,2027-12-17,European,100,USD
+AAPL_250C_20271217,AAPL,Call,250,2027-12-17,European,100,USD
+QQQ_700P_20271217,QQQ,Put,700,2027-12-17,European,100,USD

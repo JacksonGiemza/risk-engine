@@ -1,0 +1,12 @@
+symbol,issuer,underlying_index,expense_ratio,asset_class
+SPY,State Street,S&P 500,0.0945,Equity
+QQQ,Invesco,NASDQ 100,0.20,Equity
+IWM,iShares,Russell 2000,0.19,Equity
+EEM,iShares,MSCI Emerging Markets,0.68,Equity
+HYG,iShares,High Yield Corporate Bond,0.49,Credit
+LQD,iShares,Investment Grade Bond,0.14,Credit
+TLT,iShares,20+ Year Treasury,0.15,Rates
+IEF,iShares,7-10 Year Treasury,0.15,Rates
+GLD,SPDR,Gold,0.40,Commodity
+USO,United States Oil Fund,WTI Crude Oil,0.79,Commodity
+UUP,Invesco,US Dollar Index,0.75,FX
