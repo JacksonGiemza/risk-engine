@@ -28,7 +28,6 @@ class CurrencyConverter:
         if not self.rates:
             self.fetch_rates()
 
-            
         rate = self.rates.get(from_currency)
         if not rate:
             raise ValueError(f"Currency code '{from_currency}' not supported or found.")
