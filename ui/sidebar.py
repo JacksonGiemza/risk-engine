@@ -6,7 +6,7 @@ def render_sidebar() -> tuple[dict, bool]:
 
     portfolio_path = st.sidebar.text_input(
         "Portfolio CSV path",
-        value=r"data\raw\portfolio\portfolio.csv",
+        value=r"data\raw\portfolio\portfolio_2.csv",
     )
 
     end_date = st.sidebar.text_input(

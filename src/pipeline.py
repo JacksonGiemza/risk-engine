@@ -6,6 +6,9 @@ from src.market_data import MarketData
 from src.risk_engine import RiskEngine
 from src.backtesting import Backtesting
 from src.models import RiskReport, RiskConfig, BacktestReport
+from src.instruments.instrument_loader import InstrumentLoader
+from src.pricing.currency_conversion import CurrencyConverter
+from src.pricing.pricing_engine import PricingEngine
 
 
 class RiskPipeline:
@@ -28,7 +31,18 @@ class RiskPipeline:
         asset_returns = market_data.get_asset_returns()
         latest_prices = market_data.get_latest_prices()
 
-        self.portfolio.process_port(latest_prices)
+        currency_converter = CurrencyConverter()
+        instrument_loader = InstrumentLoader()
+
+        pricing_engine = PricingEngine(
+            instrument_loader=instrument_loader,
+            currency_converter=currency_converter
+        )
+
+        self.portfolio.process_port(
+            latest_prices=latest_prices,
+            pricing_engine=pricing_engine
+        )
 
         portfolio_returns = self.portfolio.calculate_portfolio_returns(asset_returns)
         portfolio_summary = self.portfolio.portfolio_summary()

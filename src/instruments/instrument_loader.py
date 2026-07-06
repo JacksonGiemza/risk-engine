@@ -4,20 +4,19 @@ from typing import TypeAlias
 import polars as pl
 
 from src.instruments.models import (
-    InstrumentMetaData,
-    FutureMetaData,
-    EtfMetaData,
-    FxMetaData,
-    OptionsMetaData,
+    InstrumentMetadata,
+    FutureMetadata,
+    ETFMetadata,
+    FXMetadata,
+    OptionMetadata,
 )
 
-
 Instrument: TypeAlias = (
-    InstrumentMetaData
-    | FutureMetaData
-    | EtfMetaData
-    | FxMetaData
-    | OptionsMetaData
+    InstrumentMetadata
+    | FutureMetadata
+    | ETFMetadata
+    | FXMetadata
+    | OptionMetadata
 )
 
 
@@ -45,32 +44,34 @@ class InstrumentLoader:
 
         raise ValueError(f"Unsupported instrument_type: {instrument_type}")
 
-    def load_etfs(self, symbol: str) -> EtfMetaData:
+    def load_etfs(self, symbol: str) -> ETFMetadata:
         etf = self._lookup(self.etfs, symbol, "ETF")
 
-        return EtfMetaData(
+        return ETFMetadata(
             symbol=etf["symbol"],
             instrument_type="ETF",
             asset_class=etf["asset_class"],
             expense_ratio=float(etf["expense_ratio"]),
             issuer=etf["issuer"],
+            currency=etf["currency"]
         )
 
-    def load_futures(self, symbol: str) -> FutureMetaData:
+    def load_futures(self, symbol: str) -> FutureMetadata:
         future = self._lookup(self.futures, symbol, "Future")
 
-        return FutureMetaData(
+        return FutureMetadata(
             symbol=future["symbol"],
             instrument_type="Future",
             asset_class=future["asset_class"],
             multiplier=float(future["contract_multiplier"]),
             exchange=future["exchange"],
+            currency=future["currency"]
         )
 
-    def load_fx(self, symbol: str) -> FxMetaData:
+    def load_fx(self, symbol: str) -> FXMetadata:
         fx = self._lookup(self.fx, symbol, "FXSpot")
 
-        return FxMetaData(
+        return FXMetadata(
             symbol=fx["symbol"],
             instrument_type="FXSpot",
             asset_class=fx["asset_class"],
@@ -78,10 +79,10 @@ class InstrumentLoader:
             quote_currency=fx["quote_currency"],
         )
 
-    def load_options(self, symbol: str) -> OptionsMetaData:
+    def load_options(self, symbol: str) -> OptionMetadata:
         option = self._lookup(self.options, symbol, "EuropeanOption")
 
-        return OptionsMetaData(
+        return OptionMetadata(
             symbol=option["symbol"],
             instrument_type="EuropeanOption",
             asset_class=option.get("asset_class", "Equity"),

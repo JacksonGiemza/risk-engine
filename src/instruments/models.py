@@ -10,11 +10,13 @@ class InstrumentMetadata:
 class ETFMetadata(InstrumentMetadata):
     expense_ratio: float
     issuer: str
+    currency: str
     
 @dataclass(slots=True)
 class FutureMetadata(InstrumentMetadata):
     multiplier: float
     exchange: str
+    currency: str
 
 @dataclass(slots=True)
 class FXMetadata(InstrumentMetadata):

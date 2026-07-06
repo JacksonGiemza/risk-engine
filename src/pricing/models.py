@@ -11,6 +11,7 @@ class Position:
     asset_class: str
     quantity: int
     currency: str
-    side: str
+    # side: str
     latest_price: float
+    instrument_type: str
     

@@ -7,7 +7,7 @@ load_dotenv()
 class CurrencyConverter:
     def __init__(self, portfolio_currency ="USD"):
         self.API_KEY = os.getenv("EXCHANGE_RATE_KEY")
-        self.basecurrency = portfolio_currency 
+        self.portfolio_currency = portfolio_currency 
         self.url = f'https://v6.exchangerate-api.com/v6/{self.API_KEY}/latest/'
         self.rates = {}
 
@@ -28,8 +28,11 @@ class CurrencyConverter:
         if not self.rates:
             self.fetch_rates()
 
+        if from_currency == self.portfolio_currency:
+            return amount
+
         rate = self.rates.get(from_currency)
         if not rate:
             raise ValueError(f"Currency code '{from_currency}' not supported or found.")
             
-        return amount * rate        
+        return amount / rate        

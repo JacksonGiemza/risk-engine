@@ -2,7 +2,8 @@ from typing import Literal
 import pandas as pd
 
 from src.models import PortfolioSummary
-
+from src.pricing.pricing_engine import PricingEngine
+from src.pricing.models import Position
 
 class Portfolio:
     def __init__(self, PATH: str) -> None:
@@ -15,13 +16,19 @@ class Portfolio:
         self.portfolio, self.ticker_list = self._load_portfolio()
 
     # -- facade methods -- 
-    def process_port(self, latest_prices: dict[str, float]) -> pd.DataFrame:
+    def process_port(
+        self, 
+        latest_prices: dict[str, float], 
+        pricing_engine: PricingEngine
+    ) -> pd.DataFrame:
+
         self._validate_portfolio(stage="loaded")
         self._attach_latest_prices(latest_prices)
         self._validate_portfolio(stage="priced")
-        self._calculate_market_values()
+        self._price_positions(pricing_engine)
         self._calculate_weights()
         self._validate_portfolio(stage="processed")
+
         return self.portfolio
 
     def calculate_portfolio_returns(self, asset_returns: pd.DataFrame) -> pd.Series:
@@ -60,6 +67,7 @@ class Portfolio:
         weights: pd.Series = (
             self.portfolio
             .set_index("symbol")["weight"]
+            .sum()
             .reindex(returns_columns)
         )
 
@@ -86,11 +94,26 @@ class Portfolio:
 
         return self.portfolio
 
-    def _calculate_market_values(self) -> pd.DataFrame:
-        self.portfolio["market_value"] = (
-            self.portfolio["quantity"] * self.portfolio["latest_price"]
-        )
-        self.portfolio["abs_exposure"] = self.portfolio["market_value"].abs()
+    def _price_positions(self, pricing_engine: PricingEngine) -> pd.DataFrame:
+
+        market_values = []
+        abs_exposures = []
+        for row in self.portfolio.itertuples(index=True):
+            position = Position(
+                symbol=row.symbol,
+                asset_class=row.asset_class,
+                quantity=row.quantity,
+                currency=row.currency,
+                latest_price=row.latest_price,
+                instrument_type=row.instrument_type
+            )
+
+            pricing_result = pricing_engine.price_position(position)
+            market_values.append(pricing_result.market_value)
+            abs_exposures.append(pricing_result.abs_exposure)
+
+        self.portfolio["market_value"] = market_values
+        self.portfolio["abs_exposure"] = abs_exposures
         self.gross_exposure: float = float(self.portfolio["abs_exposure"].sum())
 
         return self.portfolio
@@ -115,8 +138,8 @@ class Portfolio:
             ):
                 raise ValueError("Portfolio missing required columns: symbol and/or quantity.")
 
-            if not self.portfolio["symbol"].is_unique:
-                raise ValueError("Portfolio has duplicate symbols.")
+            if not self.portfolio["position_id"].is_unique:
+                raise ValueError("Portfolio has duplicate position_id.")
 
             if not pd.api.types.is_numeric_dtype(self.portfolio["quantity"]):
                 raise ValueError("quantity is not numeric.")
@@ -126,6 +149,11 @@ class Portfolio:
                 raise ValueError("latest_price column not found.")
 
             if self.portfolio["latest_price"].isna().any():
+                missing = self.portfolio[
+                    self.portfolio["latest_price"].isna()
+                ]
+
+                print(missing[["symbol", "instrument_type"]])
                 raise ValueError("Missing values in portfolio latest_price.")
 
             if not pd.api.types.is_numeric_dtype(self.portfolio["latest_price"]):
