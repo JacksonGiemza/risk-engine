@@ -66,7 +66,7 @@ class Portfolio:
     def get_weights(self, returns_columns: pd.Index) -> pd.Series:
         weights: pd.Series = (
             self.portfolio
-            .set_index("symbol")["weight"]
+            .groupby("symbol")["weight"]
             .sum()
             .reindex(returns_columns)
         )

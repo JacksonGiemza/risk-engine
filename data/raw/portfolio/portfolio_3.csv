@@ -19,3 +19,7 @@ position_id,symbol,instrument_type,asset_class,quantity,currency,strategy
 18,EURUSD=X,FXSpot,FX,50000,USD,EUR Hedge
 19,GBPUSD=X,FXSpot,FX,-30000,USD,GBP Hedge
 20,JPY=X,FXSpot,FX,1000000,USD,JPY Exposure
+21,SPY_650C_20271217,EuropeanOption,Equity,10,USD,Covered Call
+22,SPY_550P_20271217,EuropeanOption,Equity,5,USD,Tail Hedge
+23,AAPL_250C_20271217,EuropeanOption,Equity,20,USD,Tech Upside
+24,QQQ_700P_20271217,EuropeanOption,Equity,-10,USD,Income Strategy
