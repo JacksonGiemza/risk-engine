@@ -23,9 +23,9 @@ class MarketData:
         returns = self._calculate_returns()
         return returns
     
-    def get_latest_prices(self) -> dict[str, float]:
+    def get_market_price(self) -> dict[str, float]:
         if self.prices.empty:
-            raise ValueError("Load prices before getting latest prices.")
+            raise ValueError("Load prices before getting market price.")
         
         return self.prices.iloc[-1].to_dict()
     

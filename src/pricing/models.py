@@ -12,6 +12,6 @@ class Position:
     quantity: int
     currency: str
     # side: str
-    latest_price: float
+    market_price: float
     instrument_type: str
     

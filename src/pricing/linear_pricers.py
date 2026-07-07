@@ -18,7 +18,7 @@ class LinearPricer:
         self.currency_converter = currency_converter
 
     def etf_pricing(self, metadata: ETFMetadata) -> PricingResult:
-        market_value = self.position.quantity * self.position.latest_price
+        market_value = self.position.quantity * self.position.market_price
 
         if metadata.currency != self.position.currency:
             market_value = self.currency_converter.convert_to_base(
@@ -35,10 +35,10 @@ class LinearPricer:
     
     def future_pricing(self, metadata: FutureMetadata) -> PricingResult:
 
-        notional = self.position.quantity * self.position.latest_price * metadata.multiplier
+        notional = self.position.quantity * self.position.market_price * metadata.multiplier
 
         if metadata.currency != self.position.currency:
-            notional = self.cc.convert_to_base(
+            notional = self.currency_converter.convert_to_base(
                             amount=notional, 
                             from_currency=metadata.currency
                             )
@@ -51,7 +51,7 @@ class LinearPricer:
         )
 
     def fx_pricing(self, metadata: FXMetadata) -> PricingResult:
-        quote_value = self.position.quantity * self.position.latest_price
+        quote_value = self.position.quantity * self.position.market_price
         
         if metadata.quote_currency == self.position.currency:
             market_value = quote_value

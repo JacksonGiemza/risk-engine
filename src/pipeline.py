@@ -29,7 +29,7 @@ class RiskPipeline:
         )
 
         asset_returns = market_data.get_asset_returns()
-        latest_prices = market_data.get_latest_prices()
+        market_price = market_data.get_market_price()
 
         currency_converter = CurrencyConverter()
         instrument_loader = InstrumentLoader()
@@ -40,7 +40,7 @@ class RiskPipeline:
         )
 
         self.portfolio.process_port(
-            latest_prices=latest_prices,
+            market_price=market_price,
             pricing_engine=pricing_engine
         )
 

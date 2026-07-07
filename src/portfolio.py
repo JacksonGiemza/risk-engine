@@ -18,12 +18,12 @@ class Portfolio:
     # -- facade methods -- 
     def process_port(
         self, 
-        latest_prices: dict[str, float], 
+        market_price: dict[str, float], 
         pricing_engine: PricingEngine
     ) -> pd.DataFrame:
 
         self._validate_portfolio(stage="loaded")
-        self._attach_latest_prices(latest_prices)
+        self._attach_market_price(market_price)
         self._validate_portfolio(stage="priced")
         self._price_positions(pricing_engine)
         self._calculate_weights()
@@ -87,9 +87,9 @@ class Portfolio:
 
         return self.portfolio, self.ticker_list
 
-    def _attach_latest_prices(self, latest_prices: dict[str, float]) -> pd.DataFrame:
-        self.portfolio["latest_price"] = [
-            latest_prices.get(sym, float("nan")) for sym in self.portfolio["symbol"]
+    def _attach_market_price(self, market_price: dict[str, float]) -> pd.DataFrame:
+        self.portfolio["market_price"] = [
+            market_price.get(sym, float("nan")) for sym in self.portfolio["symbol"]
         ]
 
         return self.portfolio
@@ -104,7 +104,7 @@ class Portfolio:
                 asset_class=row.asset_class,
                 quantity=row.quantity,
                 currency=row.currency,
-                latest_price=row.latest_price,
+                market_price=row.market_price,
                 instrument_type=row.instrument_type
             )
 
@@ -145,19 +145,19 @@ class Portfolio:
                 raise ValueError("quantity is not numeric.")
 
         if stage == "priced":
-            if "latest_price" not in self.portfolio.columns:
-                raise ValueError("latest_price column not found.")
+            if "market_price" not in self.portfolio.columns:
+                raise ValueError("market_price column not found.")
 
-            if self.portfolio["latest_price"].isna().any():
+            if self.portfolio["market_price"].isna().any():
                 missing = self.portfolio[
-                    self.portfolio["latest_price"].isna()
+                    self.portfolio["market_price"].isna()
                 ]
 
                 print(missing[["symbol", "instrument_type"]])
-                raise ValueError("Missing values in portfolio latest_price.")
+                raise ValueError("Missing values in portfolio market_price.")
 
-            if not pd.api.types.is_numeric_dtype(self.portfolio["latest_price"]):
-                raise ValueError("latest_price is not numeric.")
+            if not pd.api.types.is_numeric_dtype(self.portfolio["market_price"]):
+                raise ValueError("market_price is not numeric.")
 
         if stage == "processed":
             if "market_value" not in self.portfolio.columns:
