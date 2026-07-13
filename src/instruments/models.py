@@ -25,6 +25,7 @@ class FXMetadata(InstrumentMetadata):
 
 @dataclass(slots=True)
 class OptionMetadata(InstrumentMetadata):
+    underlying: str
     strike: float
     expiry: str
     multiplier: float

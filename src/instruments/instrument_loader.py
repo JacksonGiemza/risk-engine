@@ -86,6 +86,7 @@ class InstrumentLoader:
             symbol=option["symbol"],
             instrument_type="EuropeanOption",
             asset_class=option.get("asset_class", "Equity"),
+            underlying=option["underlying"],
             strike=float(option["strike"]),
             expiry=option["expiry"],
             multiplier=float(option["contract_multiplier"]),

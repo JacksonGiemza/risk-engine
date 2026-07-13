@@ -7,3 +7,4 @@ scratch.ipynb
 .ipynb_checkpoints/
 
 .env
+.pytest_cache
