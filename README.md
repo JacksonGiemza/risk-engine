@@ -5,7 +5,6 @@ This is my current pet project, a modular Python based portfolio risk engine for
 References:<br>
 - Options Futures and Other Derivatives by John C Hull
 - [MathWorks Overview of VaR Backtesting](https://www.mathworks.com/help/risk/overview-of-var-backtesting.html)
-- https://www.codearmo.com/python-tutorial/options-trading-black-scholes-model
 
 
 ### Installation
